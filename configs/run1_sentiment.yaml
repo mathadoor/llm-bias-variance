@@ -1,0 +1,8 @@
+# Run 1: simplest task to get signal on the pipeline and the hypothesis
+dataset: sentiment_analysis   # Instruction Induction (arXiv:2205.10782)
+metric: accuracy
+prompting: zero_shot
+mlflow:
+  tracking_uri: null   # taken from the MLFLOW_TRACKING_URI env var
+  experiment: llm-bias-variance
+  run_name: run1-sentiment

@@ -1,0 +1,10 @@
+mlflow
+jupyterlab
+pandas
+numpy
+scikit-learn
+datasets
+matplotlib
+litellm
+python-dotenv
+pyyaml

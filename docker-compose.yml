@@ -1,0 +1,23 @@
+services:
+  lab:
+    build:
+      context: .
+      dockerfile: .Dockerfile
+      args:
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
+    ports:
+      - "8888:8888"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI:-http://host.docker.internal:5000}
+      PYTHONPATH: /workspace
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # bind mount: notebooks, shared/ and configs/ edits persist on the host
+      - .:/workspace
+      # bind mount: host Hugging Face cache, shared with other repos (override with HF_CACHE_DIR)
+      - ${HF_CACHE_DIR:-~/.cache/huggingface}:/home/dev/.cache/huggingface
