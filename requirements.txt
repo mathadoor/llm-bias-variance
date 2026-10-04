@@ -7,4 +7,6 @@ datasets
 matplotlib
 litellm
 python-dotenv
+torch
 pyyaml
+transformers
