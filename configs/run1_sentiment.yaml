@@ -14,3 +14,4 @@ mlflow:
   tracking_uri: null   # taken from the MLFLOW_TRACKING_URI env var
   experiment: llm-bias-variance-2
   run_name: run1-sentiment
+seed: 0
