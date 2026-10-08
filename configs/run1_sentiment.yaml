@@ -2,9 +2,10 @@
 dataset: 
     name: ajaykarthick/imdb-movie-reviews   # for sentiment analysis
 model:
-    name: Qwen/Qwen3-0.6B
+    name: Qwen/Qwen3-4B
 metric: accuracy
 prompting: zero_shot
+chat_template: True
 generation:
     temperature: 0.0
     max_new_tokens: 200
