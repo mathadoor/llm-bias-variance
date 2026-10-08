@@ -15,6 +15,7 @@ train:
     num_samples: [1, 3, 5, 10, 20, 50]
 validation:
     batch_size: 32
+    num_traces: 5   # per correct / incorrect group
 mlflow:
   tracking_uri: null   # taken from the MLFLOW_TRACKING_URI env var
   experiment: llm-bias-variance-2
