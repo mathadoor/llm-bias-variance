@@ -10,3 +10,4 @@ python-dotenv
 torch
 pyyaml
 transformers
+tqdm
