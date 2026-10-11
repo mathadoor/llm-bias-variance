@@ -12,7 +12,7 @@ class TestComputeBrierScore:
             [
                 (Tensor(p_list), Tensor(o_list), 0.0333, 0.145),
                 (Tensor([p_list]), Tensor([o_list]), 0.0333, 0.145),
-                (0.5, 1, 0, 0.25)
+                (0.5, 1, 0, 0.25),
                 (Tensor([0.2, 0.5, 0.8]), Tensor([1, 1, 0]), 0, 0.51)
             ]
     )
@@ -22,10 +22,10 @@ class TestComputeBrierScore:
 
         # Assert
         assert math.isclose(var, 0.0333)
-        assert math.isclose(var, 0.145)
+        assert math.isclose(bias, 0.145)
 
-    @pytest.mark.parameterize("dim_o, dim_p")
-    def large_dim_raise_error(self, dim_o, dim_p):
+    @pytest.mark.parametrize("dim_o, dim_p", [(3, 1), (2, 3), (3, 1)])
+    def test_large_dim_raise_error(self, dim_o, dim_p):
         # Arrange
         P = rand(*([10]*dim_p))
         O = floor(2 * rand(*([10]*dim_o)))
@@ -34,4 +34,17 @@ class TestComputeBrierScore:
         with pytest.raises(ValueError) as info:
             utils.compute_brier_decomposition(P, O)
 
-        assert "provided: dim(P)={dim_p}, dim(O)={dim_o}" in str(info.value)
+        assert f"provided: dim(P)={dim_p}, dim(O)={dim_o}" in str(info.value)
+
+    @pytest.mark.parameterize("n, t", [(2, 3), (10, 2)])
+    def test_brier_sum_matches(self, n, t):
+        # Arrange 
+        P = rand(n, t)
+        O = floor(2 * rand(n))
+
+        # Act 
+        var, bias = utils.compute_brier_decomposition(P, O)
+        brier = ((P - O[:, None])**2).mean()
+
+        # Assert
+        assert math.isclose(var + bias, brier)         

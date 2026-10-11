@@ -17,10 +17,10 @@ def prep_messages(system_message: str, user_message: str) -> list[dict[str, str]
         {"role": "user_message", "content": user_message}
     ]
 
-def compute_brier_score(
+def compute_brier_decomposition(
     P: Tensor,
     O: Tensor
-) -> float:
+) -> tuple[float, float]:
     if isinstance(P, list):
         P = Tensor(P)
     if isinstance(O, list):
@@ -29,15 +29,15 @@ def compute_brier_score(
     
     dim_p, dim_o = len(P.size()), len(O.size())
     if  dim_p > 2 or dim_o != 1:
-        ValueError(
-            f"Required: dim(P) <= 2 and dim(O) == 1, 
-            provided: dim(P): {dim_p}, dim(O): {dim_o}"
+        raise ValueError(
+            "Required: dim(P) <= 2 and dim(O) == 1\n"
+            f"provided: dim(P)={dim_p}, dim(O)={dim_o}"
         )
     
-    if len(P.size()) == 1:
+    if dim_p == 1:
         P = P.unsqueeze(-1)
 
     p_mean = P.mean(axis=1)
-    variance = ((P - p_mean)**2).mean()
+    variance = ((P - p_mean.unsqueeze(-1))**2).mean()
     bias_sq = ((O - p_mean)**2).mean()
-    return bias_sq
+    return variance, bias_sq
