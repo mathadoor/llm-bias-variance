@@ -39,13 +39,14 @@ class HFGenerator:
         if not isinstance(prompt, list):
             raise ValueError(f"Expected prompt type: list or str, given type: {type(prompt)}")
     
-        tokens = self.tokenizer([full_prompt], return_tensors="pt", padding=True).to(device)
+        tokens = self.tokenizer([full_prompt], return_tensors="pt", padding=True).to(self.device)
         return self._generate_text(tokens, generation_config)
     
     def generate_chat(
+        self,
         prompt_chat: dict[str, str] | list[dict[str, str]],
         generation_config: dict[str, any],
     ):
-        tokens = self.tokenizer.apply_chat_template(prompt_chat, return_tensors="pt", padding=True).to(device)
+        tokens = self.tokenizer.apply_chat_template(prompt_chat, return_tensors="pt", padding=True).to(self.device)
         return self._generate_text(tokens, generation_config)
     
