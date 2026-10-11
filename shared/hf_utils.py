@@ -1,3 +1,4 @@
+from typing import Literal
 from torch import Tensor
 from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase
 
@@ -31,14 +32,16 @@ def _generate_text(
              f"Input_ids: {type(input_ids)}\nAttenion Mask: {type(attention_mask)}"
         )
 
-    generated_ids = model.generate(**tokens, **generation_config)
+    with torch.no_grad():
+        generated_ids = model.generate(**tokens, **generation_config)
     return tokenizer.decode(generated_ids, skip_special_tokens=True) 
 
 def generate_text(
     prompt: str | list[str]
     model: GenerationMixin,
     tokenizer: PreTrainedTokenizerBase,
-    generation_config: dict[str, any]
+    generation_config: dict[str, any],
+    device: Literal["cpu", "cuda", "mps"] 
 ):
     validate_model_tokenizer(model, tokenizer)
     if isinstance(prompt, str):
@@ -47,16 +50,17 @@ def generate_text(
     if not isinstance(prompt, list):
         raise ValueError(f"Expected prompt type: list or str, given type: {type(prompt)}")
 
-    tokens = tokenizer([full_prompt], return_tensors="pt")
+    tokens = tokenizer([full_prompt], return_tensors="pt").to(device)
     return _generate_text(tokens, model, generation_config)
     
 def generate_chat(
     prompt_chat: dict[str, str] | list[dict[str, str]],
     model: PreTrainedModel,
     tokenizer: PreTrainedTokenizerBase,
-    generation_config: dict[str, any]
+    generation_config: dict[str, any],
+    device: Literal["cpu", "cuda", "mps"] 
 ):
     validate_model_tokenizer(model, tokenizer)
-    tokens = tokenizer.apply_chat_template(prompt_chat, return_tensors="pt")
+    tokens = tokenizer.apply_chat_template(prompt_chat, return_tensors="pt").to(device)
     return _generate_text(tokens, model, generation_config)
     
