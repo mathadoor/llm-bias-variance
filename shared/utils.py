@@ -1,4 +1,4 @@
-def coerce_numeric(text: str, strict=False, placeholder=-1):
+def coerce_numeric(text: str, strict=False, placeholder=-1) -> float | int:
     try:
         return int(text)
     except ValueError:
