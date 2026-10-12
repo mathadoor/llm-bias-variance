@@ -63,3 +63,9 @@ class TestComputeBrierScore:
 
         # Assert
         assert math.isclose(var + bias, brier, rel_tol=1e-5)         
+
+    @pytest.mark.parametrize("P, O", [([0.2, 0.5, 0.8], [1, 1, 0])])
+    def test_mismatched_dim_raise_error(self, P, O):
+        with pytest.raises(ValueError) as info:
+            utils.compute_brier_decomposition(P, O)
+        assert "First dimension of P and O must match" in str(info.value)
