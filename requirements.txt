@@ -11,3 +11,4 @@ torch
 pyyaml
 transformers
 tqdm
+pytest

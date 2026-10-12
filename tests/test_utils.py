@@ -36,7 +36,7 @@ class TestComputeBrierScore:
 
         assert f"provided: dim(P)={dim_p}, dim(O)={dim_o}" in str(info.value)
 
-    @pytest.mark.parameterize("n, t", [(2, 3), (10, 2)])
+    @pytest.mark.parametrize("n, t", [(2, 3), (10, 2)])
     def test_brier_sum_matches(self, n, t):
         # Arrange 
         P = rand(n, t)
