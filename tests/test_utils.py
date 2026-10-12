@@ -37,12 +37,19 @@ class TestComputeBrierScore:
 
         assert f"provided: dim(P)={dim_p}, dim(O)={dim_o}" in str(info.value)
 
-    @pytest.mark.parametrize("P, O", [("0.0", 1.0), (0.9, "1.0"), (0.9, 1), (1.1, 1.9)])
+    @pytest.mark.parametrize("P, O", [("0.0", 1.0), (0.9, "1.0"), (0.9, 1)])
     def test_incorrect_type_raises_error(self, P, O):
         with pytest.raises(TypeError) as info:
             utils.compute_brier_decomposition(P, O)
 
         assert "type not supported" in str(info.value)
+
+    @pytest.mark.parametrize("P, O", [(0.9, 2.0), (1.1, 0.0)])
+    def test_values_out_of_range_raises_error(self, P, O):
+        with pytest.raises(ValueError) as info:
+            utils.compute_brier_decomposition(P, O)
+
+        assert "Values of P must be in the range" in str(info.value)
 
     @pytest.mark.parametrize("n, t", [(2, 3), (10, 2)])
     def test_brier_sum_matches(self, n, t):
