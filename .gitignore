@@ -2,3 +2,5 @@ mlruns/
 .env
 __pycache__/
 .ipynb_checkpoints/
+.Trash-*
+.pytest_cache/*
