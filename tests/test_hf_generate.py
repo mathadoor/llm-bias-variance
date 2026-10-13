@@ -20,8 +20,8 @@ def _get_model_config():
 def _patch_loaders(model=None, tokenizer=None):
     model = model or MagicMock(spec=GenerationMixin)
     tokenizer = tokenizer or MagicMock(spec=PreTrainedTokenizerBase)
-    with patch("transformers.AutoModel.from_pretrained", return_value=model) as m_model, \
-         patch("transformers.AutoTokenizer.from_pretrained", return_value=tokenizer) as m_tok:
+    with patch("shared.hf_utils.AutoModelForCausalLM.from_pretrained", return_value=model) as m_model, \
+         patch("shared.hf_utils.AutoTokenizer.from_pretrained", return_value=tokenizer) as m_tok:
         yield m_model, m_tok
 
 
