@@ -1,24 +1,29 @@
 from typing import Literal
 import torch
 from torch import Tensor
-from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase
+from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase, AutoTokenizer, AutoModelForCausalLM
 
 class HFGenerator:
     def __init__(
         self,
-        model: GenerationMixin,
-        tokenizer: PreTrainedTokenizerBase,
-        device: Literal["cpu", "cuda", "mps"] 
+        config: dict[str, any]
     ):
-        if not isinstance(tokenizer, PreTrainedTokenizerBase):
-            raise TypeError(f"Incorrect tokenizer type: {type(tokenizer)}")
-    
-        if not isinstance(model, GenerationMixin):
-            raise TypeError(f"The model cannot generate. Type: {type(model)}")
+        self.device = config["device"]
+        self.model = AutoModelForCausalLM.from_pretrained(
+            config["name"],
+            **config["model"]
+        ).to(self.device)
 
-        self.model = model
-        self.tokenizer = tokenizer
-        self.device = device
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            config["name"],
+            **config["tokenizer"]
+        )
+
+        if not isinstance(self.tokenizer, PreTrainedTokenizerBase):
+            raise TypeError(f"Incorrect tokenizer type: {type(self.tokenizer)}")
+    
+        if not isinstance(self.model, GenerationMixin):
+            raise TypeError(f"The model cannot generate. Type: {type(self.model)}")
 
     def _generate_text(
         self,
