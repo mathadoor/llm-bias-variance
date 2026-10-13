@@ -51,7 +51,7 @@ class TestComputeBrierScore:
 
         assert "type not supported" in str(info.value)
 
-    @pytest.mark.parametrize("P, O", [(0.9, 2.0), (1.1, 0.0)])
+    @pytest.mark.parametrize("P, O", [([[0.9]], [2.0]), ([[1.1]], [0.0])])
     def test_values_out_of_range_raises_error(self, P, O):
         with pytest.raises(ValueError) as info:
             utils.compute_brier_decomposition(P, O)
