@@ -12,9 +12,8 @@ class TestComputeBrierScore:
             [
                 (Tensor(p_list), Tensor(o_list), 1/30, 0.145),
                 (p_list, o_list, 1/30, 0.145),
-                (0.5, 1.0, 0, 0.25),
                 (Tensor([[0.2], [0.5], [0.8]]), Tensor([1, 1, 0]), 0, 0.51),
-                ([[0.2, 0.5, 0.8]], [1.0], 0.06, 0.25)
+                ([[0.2, 0.5, 0.8]], [1.0], 0.06, 0.25),
             ]
     )
     def test_score_computes_correctly(self, P, O, var_gt, bias_gt):
@@ -64,7 +63,14 @@ class TestComputeBrierScore:
         # Assert
         assert math.isclose(var + bias, brier, rel_tol=1e-5)         
 
-    @pytest.mark.parametrize("P, O", [([0.2, 0.5, 0.8], [1, 1, 0])])
+    @pytest.mark.parametrize(
+            "P, O", 
+            [
+                (0.5, 1.0, 0, 0.25),
+                ([0.2, 0.5, 0.8], [1]),
+                ([0.2, 0.5, 0.8], [1, 1, 1], 0, 0.31)
+            ]
+        )
     def test_mismatched_dim_raise_error(self, P, O):
         with pytest.raises(ValueError) as info:
             utils.compute_brier_decomposition(P, O)
