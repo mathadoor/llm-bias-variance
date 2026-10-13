@@ -24,8 +24,8 @@ class TestComputeBrierScore:
         assert math.isclose(var, var_gt, rel_tol=1e-5)
         assert math.isclose(bias, bias_gt, rel_tol=1e-5)
 
-    @pytest.mark.parametrize("dim_o, dim_p", [(3, 1), (2, 3), (3, 1)])
-    def test_large_dim_raise_error(self, dim_o, dim_p):
+    @pytest.mark.parametrize("dim_o, dim_p", [(3, 1), (2, 3), (3, 1), (1, 1)])
+    def test_incorrect_dim_raise_error(self, dim_o, dim_p):
         # Arrange
         P = rand(*([10]*dim_p))
         O = floor(2 * rand(*([10]*dim_o)))
@@ -36,7 +36,15 @@ class TestComputeBrierScore:
 
         assert f"provided: dim(P)={dim_p}, dim(O)={dim_o}" in str(info.value)
 
-    @pytest.mark.parametrize("P, O", [("0.0", 1.0), (0.9, "1.0"), (0.9, 1)])
+    @pytest.mark.parametrize(
+            "P, O", 
+            [
+                ("0.0", 1.0), 
+                (0.9, "1.0"), 
+                (0.5, 1.0),
+                (0.9, 1)
+            ]
+        )
     def test_incorrect_type_raises_error(self, P, O):
         with pytest.raises(TypeError) as info:
             utils.compute_brier_decomposition(P, O)
@@ -66,9 +74,7 @@ class TestComputeBrierScore:
     @pytest.mark.parametrize(
             "P, O", 
             [
-                (0.5, 1.0, 0, 0.25),
-                ([0.2, 0.5, 0.8], [1]),
-                ([0.2, 0.5, 0.8], [1, 1, 1], 0, 0.31)
+                ([[0.9, 0.2, 0.9]], [0, 1])
             ]
         )
     def test_mismatched_dim_raise_error(self, P, O):
