@@ -18,46 +18,38 @@ def prep_messages(system_message: str, user_message: str) -> list[dict[str, str]
     ]
 
 def compute_brier_decomposition(
-    P: Tensor | list | float,
-    O: Tensor | list | float
+    P: Tensor | list,
+    O: Tensor | list
 ) -> tuple[float, float]:
     # enforce type
-    tensor_types = {}
     tensor_dict = {"p": P, "o": O}
-    var_list = [Tensor, list, float]
     for var_name, var in tensor_dict.items():
-        for idx, _type in enumerate(var_list):
-            if isinstance(var, _type):
-                tensor_types[var_name] = idx
-                break 
-        var_type = tensor_types.get(var_name, None)
-        if var_type==1:
+        if isinstance(var, list):
             tensor_dict[var_name] = Tensor(var)
-        elif var_type==2:
-            tensor_dict[var_name] = Tensor([var])
-        elif var_type is None:
+        if not isinstance(tensor_dict[var_name], Tensor):
             raise TypeError(
                 f"type not supported for {var_name}.\n"
-                f"only tensor, list and float supported. "
-                f"Provided type: {_type}"
+                f"only tensor, list are supported. "
+                f"Provided type: {type(var)}"
             )
 
     # validate tensor dimension 
     P, O = tensor_dict["p"], tensor_dict["o"]
-    P, O = P.squeeze(), O.squeeze()
     dim_p, dim_o = len(P.size()), len(O.size())
-    if  dim_p > 2 or dim_o > 1:
+
+    if  dim_p != 2 or dim_o != 1:
         raise ValueError(
-            "Required: dim(P) <= 2 and dim(O) <= 1\n"
+            "Required: dim(P) = 2 and dim(O) = 1\n"
             f"provided: dim(P)={dim_p}, dim(O)={dim_o}"
         )
-    if dim_p == 0:
-        P = P.reshape(1, 1)
-    elif dim_p == 1:
-        P = P.unsqueeze(-1)
-    
-    if dim_o == 0:
-        O = O.reshape(1, 1)
+ 
+    # valiate number of samples is the same
+    if P.size(0) != O.size(0):
+        raise ValueError(
+            "First dimension of P and O must match\n"
+            f"P size: {P.size()}\n"
+            f"O size: {O.size()}\n"
+        )
 
     # enforce value range
     if ((0 > P) | (P > 1)).any() or ((O != 0.0) & (O != 1.0)).any():
@@ -66,6 +58,7 @@ def compute_brier_decomposition(
             "Values of O must be 0 or 1"
         )
     
+    # do the actual computation
     p_mean = P.mean(axis=1)
     variance = ((P - p_mean.unsqueeze(-1))**2).mean()
     bias_sq = ((O - p_mean)**2).mean()
