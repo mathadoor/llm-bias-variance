@@ -1,9 +1,10 @@
 from contextlib import contextmanager
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
-from transformers import GenerationMixin, PreTrainedTokenizerBase
+from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase
 
 from shared.hf_utils import HFGenerator
 
@@ -78,3 +79,77 @@ class TestHFGeneratorInit:
     def test_init_invalid_tokenizer_raises_error(self):
         with _patch_loaders(tokenizer=MagicMock(spec=object)), pytest.raises(TypeError):
             HFGenerator(_get_model_config())
+
+
+CHAT = [{"role": "user", "content": "hi"}]
+
+
+def _make_generator(generate_output):
+    """Build an HFGenerator whose tokenizer/model are mocks returning `generate_output`."""
+    model = MagicMock(spec=_CausalLM)
+    model.generate.return_value = generate_output
+    tokenizer = MagicMock(spec=PreTrainedTokenizerBase)
+    tokenizer.apply_chat_template.return_value = BatchEncoding({"input_ids": torch.tensor([[1, 2, 3]])})
+    tokenizer.decode.return_value = "decoded"
+    with _patch_loaders(model, tokenizer):
+        return HFGenerator(_get_model_config()), model, tokenizer
+
+
+def _output(**kwargs):
+    return SimpleNamespace(**kwargs)
+
+
+class TestGenerateChat:
+    def test_returns_text_tokens_and_logits(self):
+        # Arrange
+        seqs, logits = torch.tensor([4, 5, 6]), (torch.rand(1, 2),)
+        gen, _, tok = _make_generator(_output(sequences=seqs, logits=logits))
+
+        # Act
+        result = gen.generate_chat(CHAT, {})
+
+        # Assert
+        assert result["output_text"] == "decoded"
+        assert torch.equal(result["output_tokens"], seqs)
+        assert torch.equal(result["logits"], logits)
+        assert torch.equal(result["input_tokens"]["input_ids"], torch.tensor([[1, 2, 3]]))
+        tok.decode.assert_called_once()
+        assert tok.decode.call_args.kwargs["skip_special_tokens"] is True
+
+    def test_logits_omitted_when_not_returned(self):
+        gen, _, _ = _make_generator(_output(sequences=torch.tensor([4])))
+
+        result = gen.generate_chat(CHAT, {})
+
+        assert "logits" not in result
+
+    def test_missing_sequences_raises_error(self):
+        gen, _, _ = _make_generator(_output())
+
+        with pytest.raises(ValueError):
+            gen.generate_chat(CHAT, {})
+
+    def test_generation_config_forwarded_with_dict_output(self):
+        gen, model, _ = _make_generator(_output(sequences=torch.tensor([4])))
+
+        gen.generate_chat(CHAT, {"max_new_tokens": 5})
+
+        kwargs = model.generate.call_args.kwargs
+        assert kwargs["max_new_tokens"] == 5
+        assert kwargs["return_dict_in_generate"] is True
+
+    def test_caller_generation_config_not_mutated(self):
+        gen, _, _ = _make_generator(_output(sequences=torch.tensor([4])))
+        config = {"max_new_tokens": 5}
+
+        gen.generate_chat(CHAT, config)
+
+        assert config == {"max_new_tokens": 5}
+
+    @pytest.mark.parametrize("chat", [CHAT[0], CHAT])
+    def test_accepts_single_message_or_list(self, chat):
+        gen, _, tok = _make_generator(_output(sequences=torch.tensor([4])))
+
+        gen.generate_chat(chat, {})
+
+        assert tok.apply_chat_template.call_args.args[0] is chat
