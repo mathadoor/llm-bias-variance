@@ -24,34 +24,30 @@ class HFGenerator:
     
         if not isinstance(self.model, GenerationMixin):
             raise TypeError(f"The model cannot generate. Type: {type(self.model)}")
-
-    def _generate_text(
-        self,
-        tokens: BatchEncoding,
-        generation_config: dict[str, any]
-    ):    
-        with torch.no_grad():
-            generated_ids = self.model.generate(**tokens, **generation_config)
-        return self.tokenizer.decode(generated_ids, skip_special_tokens=True) 
-
-    def generate_text(
-        self,
-        prompt: str | list[str],
-        generation_config: dict[str, any],
-    ):
-        prompt = [prompt] if isinstance(prompt, str) else prompt
-    
-        if not isinstance(prompt, list):
-            raise ValueError(f"Expected prompt type: list or str, given type: {type(prompt)}")
-    
-        tokens = self.tokenizer([full_prompt], return_tensors="pt", padding=True).to(self.device)
-        return self._generate_text(tokens, generation_config)
     
     def generate_chat(
         self,
         prompt_chat: dict[str, str] | list[dict[str, str]],
         generation_config: dict[str, any],
-    ):
-        tokens = self.tokenizer.apply_chat_template(prompt_chat, return_tensors="pt", padding=True).to(self.device)
-        return self._generate_text(tokens, generation_config)
-    
+    ) -> dict[str, any]:
+        generation_config = generation_config.copy()
+        generation_config["return_dict_in_generate"] = True
+        tokens = self.tokenizer.apply_chat_template(prompt_chat, return_tensors="pt", padding=True, return_dict=True).to(self.device)
+        with torch.no_grad():
+            generated_output = self.model.generate(**tokens, **generation_config)
+
+        logits = getattr(generated_output, "logits", None)
+        generated_ids = getattr(generated_output, "sequences", None)
+        if generated_ids is None:
+            raise ValueError("There was no output from generate call")
+        output = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
+
+        return_dict = {"output_text": output, "input_tokens": tokens}
+
+        if logits is not None:
+            return_dict["logits"] = logits
+
+        if generated_ids is not None:
+            return_dict["output_tokens"] = generated_ids
+
+        return return_dict 
