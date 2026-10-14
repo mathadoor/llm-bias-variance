@@ -111,7 +111,7 @@ class TestGenerateChat:
         # Assert
         assert result["output_text"] == "decoded"
         assert torch.equal(result["output_tokens"], seqs)
-        assert torch.equal(result["logits"], logits)
+        assert result["logits"] is logits
         assert torch.equal(result["input_tokens"]["input_ids"], torch.tensor([[1, 2, 3]]))
         tok.decode.assert_called_once()
         assert tok.decode.call_args.kwargs["skip_special_tokens"] is True
