@@ -14,7 +14,7 @@ def coerce_numeric(text: str, strict=False, placeholder=-1) -> float | int:
 def prep_messages(system_message: str, user_message: str) -> list[dict[str, str]]:
     return [
         {"role": "system", "content": system_message},
-        {"role": "user_message", "content": user_message}
+        {"role": "user", "content": user_message}
     ]
 
 def compute_brier_decomposition(
