@@ -185,23 +185,34 @@ class TestLogitProcessorCall:
 
     # logits accumulate and clear upon reset
     @pytest.mark.parametrize(
-        "input_id_1, scores_1, input_id_2, scores_2, result",
+        "input_id_1, scores_1, input_id_2, scores_2, label_index, result",
         [
-            ([[1, 2]], [[0.2, 0.4, 0.5]], [[1, 2, 3]], [[0.4, 0.8, 0.9]], [[[0.2, 0.4]], [[0.4, 0.8]]]),
-            ([[1]], [[0.2, 0.4, 0.5]], [[1, 3]], [[0.4, 0.8, 0.9]], [[[0.2, 0.4]], [[0.4, 0.8]]]),
+            ([[1, 2]], [[0.2, 0.4, 0.5]], [[1, 2, 3]], [[0.4, 0.8, 0.9]], [0, 1], [[[0.2, 0.4]], [[0.4, 0.8]]]),
+            ([[1]], [[0.2, 0.4, 0.5]], [[1, 3]], [[0.4, 0.8, 0.9]], [0, 1], [[[0.2, 0.4]], [[0.4, 0.8]]]),
             (
                 [[1, 2], [2, 3]], 
                 [[0.2, 0.4, 0.8], [0.3, 0.5, 0.2]], 
                 [[1, 2, 3], [2, 3, 2]], 
                 [[0.2, 0.9, 0.3], [0.9, 0.5, 0.2]], 
+                [0, 1],
                 [[[0.2, 0.4], [0.3, 0.5]], [[0.2, 0.9], [0.9, 0.5]]]
+            ),
+            # switched order: every step follows label_index order
+            ([[1, 2]], [[0.2, 0.4, 0.5]], [[1, 2, 3]], [[0.4, 0.8, 0.9]], [1, 0], [[[0.4, 0.2]], [[0.8, 0.4]]]),
+            (
+                [[1, 2], [2, 3]], 
+                [[0.2, 0.4, 0.8], [0.3, 0.5, 0.2]], 
+                [[1, 2, 3], [2, 3, 2]], 
+                [[0.2, 0.9, 0.3], [0.9, 0.5, 0.2]], 
+                [1, 0],
+                [[[0.4, 0.2], [0.5, 0.3]], [[0.9, 0.2], [0.5, 0.9]]]
             ),
         ]
     )
     def test_logits_multiple_calls_accumulate_and_clears_upon_reset(
-        self, input_id_1, scores_1, input_id_2, scores_2, result
+        self, input_id_1, scores_1, input_id_2, scores_2, label_index, result
     ):
-        logit_processor = HFLogitProcessor(label_index=[0, 1]) 
+        logit_processor = HFLogitProcessor(label_index=label_index) 
         for input_ids, scores in [(input_id_1, scores_1), (input_id_2, scores_2)]:
             logit_processor(
                 torch.tensor(input_ids),
