@@ -6,7 +6,6 @@ from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase
 class HFLogitProcessor(LogitProcessor):
     def __init__(
         self,
-        max_new_tokens: int,
         label_index: list[int]
     ):
         self.scores = []
