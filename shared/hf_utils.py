@@ -1,7 +1,22 @@
+from collections import deque
 from typing import Literal
 import torch
 from torch import Tensor
-from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase, AutoTokenizer, AutoModelForCausalLM
+from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase, AutoTokenizer, AutoModelForCausalLM, LogitProcessor
+
+class HFLogitProcessor(LogitProcessor):
+    def __init__(
+        self,
+        max_new_tokens: int,
+        label_index: list[int]
+    ):
+        self.scores = deque(mamxlen=max_new_tokens)
+
+    def reset_scores(self):
+        raise NotImplementedError("yet")
+
+    def get_scores(self):
+        raise NotImplementedError("yet")
 
 class HFGenerator:
     def __init__(
@@ -51,3 +66,5 @@ class HFGenerator:
             return_dict["output_tokens"] = generated_ids
 
         return return_dict 
+
+

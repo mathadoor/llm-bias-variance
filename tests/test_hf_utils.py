@@ -6,7 +6,7 @@ import pytest
 import torch
 from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase
 
-from shared.hf_utils import HFGenerator
+from shared.hf_utils import HFGenerator, HFLogitProcessor
 
 
 def _get_model_config():
@@ -153,3 +153,28 @@ class TestGenerateChat:
         gen.generate_chat(chat, {})
 
         assert tok.apply_chat_template.call_args.args[0] is chat
+
+class TestLogitProcessorCall:
+
+    @pytest.mark.parametrize(
+        "input_ids, scores, result", 
+        [
+            ([[1, 2], [2, 3]], [[0.2, 0.4, 0.8], [0.3, 0.5, 0.2]], [[0.2, 0.4], [0.3, 0.5]]),
+            ([1, 2, 4], [0.2, 0.4, 0.8], [[0.2, 0.4]]),
+            ([[1], [2]], [[0.2, 0.4, 0.8], [0.3, 0.5, 0.2]], [[0.2, 0.4], [0.3, 0.5]]),
+            ([1], [0.2, 0.4, 0.8], [[0.2, 0.4]])
+        ]
+    )
+    def test_logits_correctness(self, input_ids, scores, result):
+        logit_processor = HFLogitProcessor(max_new_tokens=10, label_index=[0, 1]) 
+        HFLogitProcessor(
+            torch.tensor(input_ids),
+            torch.tensor(scores)
+        )
+        stored_scores = logit_processor.get_scores()
+        assert torch.equal(
+            stored_scores,
+            torch.tensor(result)
+        )
+
+    # older logits are dropped
