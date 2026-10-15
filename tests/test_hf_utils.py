@@ -167,7 +167,7 @@ class TestLogitProcessorCall:
     )
     def test_logits_correctness(self, input_ids, scores, result):
         logit_processor = HFLogitProcessor(label_index=[0, 1]) 
-        logit_processor(
+        returned_score = logit_processor(
             torch.tensor(input_ids),
             torch.tensor(scores)
         )
@@ -175,6 +175,10 @@ class TestLogitProcessorCall:
         assert torch.equal(
             stored_scores,
             torch.tensor(result)
+        )
+        assert torch.equal(
+            returned_score,
+            torch.tensor(scores)
         )
 
     # logits accumulate and clear upon reset
@@ -200,7 +204,7 @@ class TestLogitProcessorCall:
 
         assert torch.equal(
             stored_scores,
-            torch.tensors(result)
+            torch.tensor(result)
         )
         assert torch.equal(
             post_reset_score, 
