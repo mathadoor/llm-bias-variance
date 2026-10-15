@@ -166,8 +166,8 @@ class TestLogitProcessorCall:
         ]
     )
     def test_logits_correctness(self, input_ids, scores, result):
-        logit_processor = HFLogitProcessor(max_new_tokens=10, label_index=[0, 1]) 
-        HFLogitProcessor(
+        logit_processor = HFLogitProcessor(label_index=[0, 1]) 
+        logit_processor(
             torch.tensor(input_ids),
             torch.tensor(scores)
         )
@@ -177,4 +177,32 @@ class TestLogitProcessorCall:
             torch.tensor(result)
         )
 
-    # older logits are dropped
+    # logits accumulate and clear upon reset
+    @pytest.mark.parametrize(
+        "input_id_1, scores_1, input_id_2, scores_2, result",
+        [
+            ([1, 2], [0.2, 0.4, 0.5], [1, 2, 3], [0.4, 0.8, 0.9], [[0.2, 0.4], [0.4, 0.8]]),
+            ([1], [0.2, 0.4, 0.5], [1, 3], [0.4, 0.8, 0.9], [[0.2, 0.4], [0.4, 0.8]])
+        ]
+    )
+    def test_logits_multiple_calls_accumulate_and_clears_upon_reset(
+        self, input_id_1, scores_1, input_id_2, scores_2, result
+    ):
+        logit_processor = HFLogitProcessor(label_index=[0, 1]) 
+        for input_ids, scores in [(input_id_1, scores_1), (input_id_2, scores_2)]:
+            logit_processor(
+                torch.tensor(input_ids),
+                torch.tensor(scores)
+            )
+        stored_scores = logit_processor.get_scores()
+        logit_processor.reset()
+        post_reset_score = logit_processor.get_scores()
+
+        assert torch.equal(
+            stored_scores,
+            torch.tensors(result)
+        )
+        assert torch.equal(
+            post_reset_score, 
+            torch.tensor([])
+        )

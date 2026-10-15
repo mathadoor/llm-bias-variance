@@ -1,4 +1,3 @@
-from collections import deque
 from typing import Literal
 import torch
 from torch import Tensor
@@ -10,7 +9,7 @@ class HFLogitProcessor(LogitProcessor):
         max_new_tokens: int,
         label_index: list[int]
     ):
-        self.scores = deque(mamxlen=max_new_tokens)
+        self.scores = []
 
     def reset_scores(self):
         raise NotImplementedError("yet")
