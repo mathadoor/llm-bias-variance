@@ -230,3 +230,31 @@ class TestLogitProcessorCall:
             post_reset_score, 
             torch.tensor([])
         )
+
+    def test_empty_label_index_raises_error(self):
+        with pytest.raises(ValueError):
+            HFLogitProcessor(label_index=[])
+
+    @pytest.mark.parametrize("label_index", [[3], [0, 3], [0, 100]])
+    def test_out_of_range_label_index_raises_error(self, label_index):
+        logit_processor = HFLogitProcessor(label_index=label_index)
+
+        with pytest.raises(IndexError):
+            logit_processor(torch.tensor([[1, 2]]), torch.tensor([[0.2, 0.4, 0.8]]))
+
+    def test_get_scores_before_any_call_is_empty(self):
+        logit_processor = HFLogitProcessor(label_index=[0, 1])
+
+        assert torch.equal(logit_processor.get_scores(), torch.tensor([]))
+
+    def test_stored_scores_unaffected_by_later_changes_to_input(self):
+        # Arrange
+        logit_processor = HFLogitProcessor(label_index=[0, 1])
+        scores = torch.tensor([[0.2, 0.4, 0.8]])
+
+        # Act
+        logit_processor(torch.tensor([[1, 2]]), scores)
+        scores.zero_()
+
+        # Assert
+        assert torch.equal(logit_processor.get_scores(), torch.tensor([[[0.2, 0.4]]]))

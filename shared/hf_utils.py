@@ -1,9 +1,9 @@
 from typing import Literal
 import torch
 from torch import Tensor
-from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase, AutoTokenizer, AutoModelForCausalLM, LogitProcessor
+from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase, AutoTokenizer, AutoModelForCausalLM, LogitsProcessor
 
-class HFLogitProcessor(LogitProcessor):
+class HFLogitProcessor(LogitsProcessor):
     def __init__(
         self,
         label_index: list[int]
