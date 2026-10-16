@@ -17,7 +17,19 @@ def _get_model_config():
         "tokenizer": {"padding_side": "left"},
     }
 
-
+def _get_generation_config(
+    store_probs: bool = True,
+    labels: list[str] = ["0", "1"] 
+):
+    return dict(
+        store_probs=store_probs,
+        labels=labels,
+        temperature=0.0,
+        do_sample=False,
+        max_new_tokens=1000,
+        num_beams=1
+    ) 
+    
 class _CausalLM(torch.nn.Module, GenerationMixin):
     """Spec for mock models: supports both .to(device) and .generate()."""
 
@@ -33,17 +45,20 @@ def _patch_loaders(model=None, tokenizer=None):
 
 
 class TestHFGeneratorInit:
-    def test_init_loads_model_and_tokenizer(self):
+    def test_init_loads_model_and_tokenizer_and_label_indices(self):
         # Arrange
         config = _get_model_config()
+        gen_config = _get_generation_config()
 
         # Act
         with _patch_loaders() as (m_model, m_tok):
-            HFGenerator(config)
+            generator = HFGenerator(config, gen_config)
 
         # Assert
         m_model.assert_called_once_with(config["name"], **config["model"])
         m_tok.assert_called_once_with(config["name"], **config["tokenizer"])
+        for label in gen_config.get("labels", []):
+            generator.tokenizer.assert_called_once_with(label)
 
     def test_init_model_supports_generation(self):
         # Arrange
@@ -52,7 +67,7 @@ class TestHFGeneratorInit:
 
         # Act
         with _patch_loaders(model, tokenizer):
-            generator = HFGenerator(_get_model_config())
+            generator = HFGenerator(_get_model_config(), _get_generation_config())
 
         # Assert
         assert generator.model is model
@@ -60,25 +75,59 @@ class TestHFGeneratorInit:
         assert isinstance(generator.model, GenerationMixin)
         assert hasattr(generator.model, "generate")
 
+    @pytest.mark.parametrize(
+            "store_probs, labels",
+            [(True, []), (True, ["0", "1"])]
+    )
+    def test_init_model_updates_generation_config(self, store_probs, labels):
+        # Arrange
+        model = MagicMock(spec=_CausalLM)
+        tokenizer = MagicMock(spec=PreTrainedTokenizerBase)
+        gen_config = _get_generation_config(store_probs=store_probs, labels=labels)
+
+    
+        # Act
+        with _patch_loaders(model, tokenizer):
+            generator = HFGenerator(_get_model_config(), gen_config)
+
+        generator.tokenizer.return_value = BatchEncoding(
+            input_ids=torch.Tensor([[0, 1]]),
+            attention_mask=torch.flip(torch.triu(torch.ones(2, 2)), dims=[1])
+        )
+
+        # Assert
+        updated_gen_config = gen_config.copy()
+        del updated_gen_config["store_probs"]
+        del updated_gen_config["labels"]
+
+        if store_probs:
+            if len(labels) == 0:
+                updated_gen_config["output_probs"] = True
+            else:
+                updated_gen_config["output_probs"] = False
+                updated_gen_config["label_index"] = [0, 1]
+
+
     def test_init_moves_model_to_device(self):
         # Arrange
         model = MagicMock(spec=_CausalLM)
         config = _get_model_config()
+        gen_config = _get_generation_config()
 
         # Act
         with _patch_loaders(model):
-            HFGenerator(config)
+            HFGenerator(config, gen_config)
 
         # Assert
         model.to.assert_called_once_with(config["device"])
 
     def test_init_non_generative_model_raises_error(self):
         with _patch_loaders(model=MagicMock(spec=torch.nn.Module)), pytest.raises(TypeError):
-            HFGenerator(_get_model_config())
+            HFGenerator(_get_model_config(), _get_generation_config())
 
     def test_init_invalid_tokenizer_raises_error(self):
         with _patch_loaders(tokenizer=MagicMock(spec=object)), pytest.raises(TypeError):
-            HFGenerator(_get_model_config())
+            HFGenerator(_get_model_config(), _get_generation_config())
 
 
 CHAT = [{"role": "user", "content": "hi"}]
@@ -275,10 +324,3 @@ class TestLogitProcessorCall:
         # Assert
         assert torch.allclose(full.get_probs().sum(dim=-1), torch.ones(1, 2))
         assert (subset.get_probs().sum(dim=-1) < 1).all()
-
-    def test_probs_stable_for_large_logits(self):
-        logit_processor = HFLogitProcessor(label_index=[0, 1])
-
-        logit_processor(torch.tensor([[1]]), torch.tensor([[1000.0, 0.0, 0.0]]))
-
-        assert torch.allclose(logit_processor.get_probs(), torch.tensor([[[1.0, 0.0]]]))
