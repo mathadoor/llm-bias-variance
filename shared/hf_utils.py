@@ -1,20 +1,40 @@
-from typing import Literal
+from typing import Literal, Sequence
 import torch
-from torch import Tensor
+from torch import Tensor, softmax
 from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase, AutoTokenizer, AutoModelForCausalLM, LogitsProcessor
 
 class HFLogitProcessor(LogitsProcessor):
     def __init__(
         self,
-        label_index: list[int]
+        label_index: Sequence[int]
     ):
-        self.scores = []
+        self.probs = []
+        self.label_index = label_index.copy()
 
-    def reset_scores(self):
-        raise NotImplementedError("yet")
+        if label_index is None or len(label_index) == 0:
+            raise ValueError("Label index must not be empty.")
 
-    def get_scores(self):
-        raise NotImplementedError("yet")
+    def reset(self):
+        self.probs = []
+
+    def get_probs(self):
+        return torch.stack(
+            self.probs,
+            axis=0
+        ) if len(self.probs) != 0 else Tensor([])
+    
+    def __call__(
+        self,
+        input_ids: Tensor,
+        scores: Tensor
+    ):
+        probs = softmax(scores, axis=1)
+        self.probs.append(
+            probs[:, self.label_index].detach().cpu()
+        )
+        return scores
+        
+
 
 class HFGenerator:
     def __init__(
