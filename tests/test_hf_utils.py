@@ -159,25 +159,27 @@ class TestLogitProcessorCall:
     @pytest.mark.parametrize(
         "input_ids, scores, label_index, result",
         [
-            ([[1, 2], [2, 3]], [[0.2, 0.4, 0.8], [0.3, 0.5, 0.2]], [0, 1], [[[0.2, 0.4], [0.3, 0.5]]]),
-            ([[1, 2, 4]], [[0.2, 0.4, 0.8]], [0, 1], [[[0.2, 0.4]]]),
-            ([[1], [2]], [[0.2, 0.4, 0.8], [0.3, 0.5, 0.2]], [0, 1], [[[0.2, 0.4], [0.3, 0.5]]]),
-            ([[1]], [[0.2, 0.4, 0.8]], [0, 1], [[[0.2, 0.4]]]),
-            ([[1, 2], [2, 3]], [[0.2, 0.4, 0.8], [0.3, 0.5, 0.2]], [1, 0], [[[0.4, 0.2], [0.5, 0.3]]]),
-            ([[1]], [[0.2, 0.4, 0.8]], [1, 0], [[[0.4, 0.2]]]),
+            ([[1, 2], [2, 3]], [[0.2, 0.4, 0.8], [0.3, 0.5, 0.2]], [0, 1], [[[0.247309, 0.302064], [0.319873, 0.390694]]]),
+            ([[1, 2, 4]], [[0.2, 0.4, 0.8]], [0, 1], [[[0.247309, 0.302064]]]),
+            ([[1], [2]], [[0.2, 0.4, 0.8], [0.3, 0.5, 0.2]], [0, 1], [[[0.247309, 0.302064], [0.319873, 0.390694]]]),
+            ([[1]], [[0.2, 0.4, 0.8]], [0, 1], [[[0.247309, 0.302064]]]),
+            ([[1, 2], [2, 3]], [[0.2, 0.4, 0.8], [0.3, 0.5, 0.2]], [1, 0], [[[0.302064, 0.247309], [0.390694, 0.319873]]]),
+            ([[1]], [[0.2, 0.4, 0.8]], [1, 0], [[[0.302064, 0.247309]]]),
         ]
     )
-    def test_logits_correctness(self, input_ids, scores, label_index, result):
+    def test_probs_correctness(self, input_ids, scores, label_index, result):
         logit_processor = HFLogitProcessor(label_index=label_index)
         returned_score = logit_processor(
             torch.tensor(input_ids),
             torch.tensor(scores)
         )
-        stored_scores = logit_processor.get_scores()
-        assert torch.equal(
+        stored_scores = logit_processor.get_probs()
+        assert torch.allclose(
             stored_scores,
-            torch.tensor(result)
+            torch.tensor(result),
+            atol=1e-6
         )
+        # the processor must pass the raw scores through untouched
         assert torch.equal(
             returned_score,
             torch.tensor(scores)
@@ -187,29 +189,29 @@ class TestLogitProcessorCall:
     @pytest.mark.parametrize(
         "input_id_1, scores_1, input_id_2, scores_2, label_index, result",
         [
-            ([[1, 2]], [[0.2, 0.4, 0.5]], [[1, 2, 3]], [[0.4, 0.8, 0.9]], [0, 1], [[[0.2, 0.4]], [[0.4, 0.8]]]),
-            ([[1]], [[0.2, 0.4, 0.5]], [[1, 3]], [[0.4, 0.8, 0.9]], [0, 1], [[[0.2, 0.4]], [[0.4, 0.8]]]),
+            ([[1, 2]], [[0.2, 0.4, 0.5]], [[1, 2, 3]], [[0.4, 0.8, 0.9]], [0, 1], [[[0.280013, 0.342009]], [[0.241514, 0.360297]]]),
+            ([[1]], [[0.2, 0.4, 0.5]], [[1, 3]], [[0.4, 0.8, 0.9]], [0, 1], [[[0.280013, 0.342009]], [[0.241514, 0.360297]]]),
             (
                 [[1, 2], [2, 3]], 
                 [[0.2, 0.4, 0.8], [0.3, 0.5, 0.2]], 
                 [[1, 2, 3], [2, 3, 2]], 
                 [[0.2, 0.9, 0.3], [0.9, 0.5, 0.2]], 
                 [0, 1],
-                [[[0.2, 0.4], [0.3, 0.5]], [[0.2, 0.9], [0.9, 0.5]]]
+                [[[0.247309, 0.302064], [0.319873, 0.390694]], [[0.242782, 0.488903], [0.461488, 0.309344]]]
             ),
             # switched order: every step follows label_index order
-            ([[1, 2]], [[0.2, 0.4, 0.5]], [[1, 2, 3]], [[0.4, 0.8, 0.9]], [1, 0], [[[0.4, 0.2]], [[0.8, 0.4]]]),
+            ([[1, 2]], [[0.2, 0.4, 0.5]], [[1, 2, 3]], [[0.4, 0.8, 0.9]], [1, 0], [[[0.342009, 0.280013]], [[0.360297, 0.241514]]]),
             (
                 [[1, 2], [2, 3]], 
                 [[0.2, 0.4, 0.8], [0.3, 0.5, 0.2]], 
                 [[1, 2, 3], [2, 3, 2]], 
                 [[0.2, 0.9, 0.3], [0.9, 0.5, 0.2]], 
                 [1, 0],
-                [[[0.4, 0.2], [0.5, 0.3]], [[0.9, 0.2], [0.5, 0.9]]]
+                [[[0.302064, 0.247309], [0.390694, 0.319873]], [[0.488903, 0.242782], [0.309344, 0.461488]]]
             ),
         ]
     )
-    def test_logits_multiple_calls_accumulate_and_clears_upon_reset(
+    def test_probs_multiple_calls_accumulate_and_clears_upon_reset(
         self, input_id_1, scores_1, input_id_2, scores_2, label_index, result
     ):
         logit_processor = HFLogitProcessor(label_index=label_index) 
@@ -218,13 +220,14 @@ class TestLogitProcessorCall:
                 torch.tensor(input_ids),
                 torch.tensor(scores)
             )
-        stored_scores = logit_processor.get_scores()
+        stored_scores = logit_processor.get_probs()
         logit_processor.reset()
-        post_reset_score = logit_processor.get_scores()
+        post_reset_score = logit_processor.get_probs()
 
-        assert torch.equal(
+        assert torch.allclose(
             stored_scores,
-            torch.tensor(result)
+            torch.tensor(result),
+            atol=1e-6
         )
         assert torch.equal(
             post_reset_score, 
@@ -242,10 +245,10 @@ class TestLogitProcessorCall:
         with pytest.raises(IndexError):
             logit_processor(torch.tensor([[1, 2]]), torch.tensor([[0.2, 0.4, 0.8]]))
 
-    def test_get_scores_before_any_call_is_empty(self):
+    def test_get_probs_before_any_call_is_empty(self):
         logit_processor = HFLogitProcessor(label_index=[0, 1])
 
-        assert torch.equal(logit_processor.get_scores(), torch.tensor([]))
+        assert torch.equal(logit_processor.get_probs(), torch.tensor([]))
 
     def test_stored_scores_unaffected_by_later_changes_to_input(self):
         # Arrange
@@ -257,4 +260,25 @@ class TestLogitProcessorCall:
         scores.zero_()
 
         # Assert
-        assert torch.equal(logit_processor.get_scores(), torch.tensor([[[0.2, 0.4]]]))
+        assert torch.allclose(logit_processor.get_probs(), torch.tensor([[[0.247309, 0.302064]]]), atol=1e-6)
+
+    def test_probs_are_normalised_over_full_vocab_not_just_labels(self):
+        # Arrange
+        scores = torch.tensor([[0.2, 0.4, 0.8], [0.3, 0.5, 0.2]])
+        full = HFLogitProcessor(label_index=[0, 1, 2])
+        subset = HFLogitProcessor(label_index=[0, 1])
+
+        # Act
+        full(torch.tensor([[1], [2]]), scores)
+        subset(torch.tensor([[1], [2]]), scores)
+
+        # Assert
+        assert torch.allclose(full.get_probs().sum(dim=-1), torch.ones(1, 2))
+        assert (subset.get_probs().sum(dim=-1) < 1).all()
+
+    def test_probs_stable_for_large_logits(self):
+        logit_processor = HFLogitProcessor(label_index=[0, 1])
+
+        logit_processor(torch.tensor([[1]]), torch.tensor([[1000.0, 0.0, 0.0]]))
+
+        assert torch.allclose(logit_processor.get_probs(), torch.tensor([[[1.0, 0.0]]]))
