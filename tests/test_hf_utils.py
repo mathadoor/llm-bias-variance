@@ -100,12 +100,10 @@ class TestHFGeneratorInit:
         del updated_gen_config["store_probs"]
         del updated_gen_config["labels"]
 
-        if store_probs:
-            if len(labels) == 0:
-                updated_gen_config["output_probs"] = True
-            else:
-                updated_gen_config["output_probs"] = False
-                updated_gen_config["label_index"] = [0, 1]
+        if store_probs and len(labels) == 0:
+            updated_gen_config["output_probs"] = True
+        else: 
+            updated_gen_config["output_probs"] = False
         
         assert generator.gen_config == updated_gen_config
 

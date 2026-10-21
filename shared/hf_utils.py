@@ -39,7 +39,8 @@ class HFLogitProcessor(LogitsProcessor):
 class HFGenerator:
     def __init__(
         self,
-        config: dict[str, any]
+        config: dict[str, any],
+        generation_config: dict[str, any],
     ):
         self.device = config["device"]
         self.model = AutoModelForCausalLM.from_pretrained(
@@ -52,6 +53,20 @@ class HFGenerator:
             **config["tokenizer"]
         )
 
+        generation_config = generation_config.copy()
+        generation_config["return_dict_in_generate"] = True
+        store_probs = generation_config.get("store_probs")
+        labels = generation_config.get("labels")
+
+        if store_probs:
+            if len(labels) == 0:
+                updated_gen_config["output_probs"] = True
+            else:
+                updated_gen_config["output_probs"] = False
+                updated_gen_config["label_index"] = [0, 1]
+
+        self.gen_config = generation_config
+
         if not isinstance(self.tokenizer, PreTrainedTokenizerBase):
             raise TypeError(f"Incorrect tokenizer type: {type(self.tokenizer)}")
     
@@ -61,13 +76,10 @@ class HFGenerator:
     def generate_chat(
         self,
         prompt_chat: dict[str, str] | list[dict[str, str]],
-        generation_config: dict[str, any],
     ) -> dict[str, any]:
-        generation_config = generation_config.copy()
-        generation_config["return_dict_in_generate"] = True
         tokens = self.tokenizer.apply_chat_template(prompt_chat, return_tensors="pt", padding=True, return_dict=True).to(self.device)
         with torch.no_grad():
-            generated_output = self.model.generate(**tokens, **generation_config)
+            generated_output = self.model.generate(**tokens, **self.generation_config)
 
         logits = getattr(generated_output, "logits", None)
         generated_ids = getattr(generated_output, "sequences", None)
