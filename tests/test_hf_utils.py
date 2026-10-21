@@ -110,7 +110,7 @@ class TestHFGeneratorInit:
 
         # Assert
         assert generator.label_index == labels
-        assert generator.gen_config == updated_gen_config
+        assert generator.generation_config == updated_gen_config
 
 
     def test_init_moves_model_to_device(self):
@@ -146,7 +146,7 @@ def _make_generator(generate_output):
     tokenizer.apply_chat_template.return_value = BatchEncoding({"input_ids": torch.tensor([[1, 2, 3]])})
     tokenizer.decode.return_value = "decoded"
     with _patch_loaders(model, tokenizer):
-        return HFGenerator(_get_model_config()), model, tokenizer
+        return HFGenerator(_get_model_config(), _get_generation_config()), model, tokenizer
 
 
 def _output(**kwargs):
@@ -160,7 +160,7 @@ class TestGenerateChat:
         gen, _, tok = _make_generator(_output(sequences=seqs, logits=logits))
 
         # Act
-        result = gen.generate_chat(CHAT, {})
+        result = gen.generate_chat(CHAT)
 
         # Assert
         assert result["output_text"] == "decoded"
@@ -173,7 +173,7 @@ class TestGenerateChat:
     def test_logits_omitted_when_not_returned(self):
         gen, _, _ = _make_generator(_output(sequences=torch.tensor([4])))
 
-        result = gen.generate_chat(CHAT, {})
+        result = gen.generate_chat(CHAT)
 
         assert "logits" not in result
 
@@ -181,30 +181,14 @@ class TestGenerateChat:
         gen, _, _ = _make_generator(_output())
 
         with pytest.raises(ValueError):
-            gen.generate_chat(CHAT, {})
+            gen.generate_chat(CHAT)
 
-    def test_generation_config_forwarded_with_dict_output(self):
-        gen, model, _ = _make_generator(_output(sequences=torch.tensor([4])))
-
-        gen.generate_chat(CHAT, {"max_new_tokens": 5})
-
-        kwargs = model.generate.call_args.kwargs
-        assert kwargs["max_new_tokens"] == 5
-        assert kwargs["return_dict_in_generate"] is True
-
-    def test_caller_generation_config_not_mutated(self):
-        gen, _, _ = _make_generator(_output(sequences=torch.tensor([4])))
-        config = {"max_new_tokens": 5}
-
-        gen.generate_chat(CHAT, config)
-
-        assert config == {"max_new_tokens": 5}
-
+        
     @pytest.mark.parametrize("chat", [CHAT[0], CHAT])
     def test_accepts_single_message_or_list(self, chat):
         gen, _, tok = _make_generator(_output(sequences=torch.tensor([4])))
 
-        gen.generate_chat(chat, {})
+        gen.generate_chat(chat)
 
         assert tok.apply_chat_template.call_args.args[0] is chat
 

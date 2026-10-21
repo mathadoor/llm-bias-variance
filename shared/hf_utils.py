@@ -58,14 +58,16 @@ class HFGenerator:
         store_probs = generation_config.get("store_probs")
         labels = generation_config.get("labels")
 
-        if store_probs:
-            if len(labels) == 0:
-                updated_gen_config["output_probs"] = True
-            else:
-                updated_gen_config["output_probs"] = False
-                updated_gen_config["label_index"] = [0, 1]
+        del generation_config["store_probs"]
+        del generation_config["labels"]
 
-        self.gen_config = generation_config
+
+        flag = store_probs and (len(labels) == 0)
+        generation_config["output_probs"] = flag 
+        label_index = [] if flag else self.tokenizer(labels).input_ids
+                
+        self.label_index = label_index
+        self.generation_config = generation_config
 
         if not isinstance(self.tokenizer, PreTrainedTokenizerBase):
             raise TypeError(f"Incorrect tokenizer type: {type(self.tokenizer)}")
@@ -77,7 +79,13 @@ class HFGenerator:
         self,
         prompt_chat: dict[str, str] | list[dict[str, str]],
     ) -> dict[str, any]:
-        tokens = self.tokenizer.apply_chat_template(prompt_chat, return_tensors="pt", padding=True, return_dict=True).to(self.device)
+        tokens = self.tokenizer.apply_chat_template(
+            prompt_chat, 
+            return_tensors="pt", 
+            padding=True, 
+            return_dict=True
+        ).to(self.device)
+
         with torch.no_grad():
             generated_output = self.model.generate(**tokens, **self.generation_config)
 
