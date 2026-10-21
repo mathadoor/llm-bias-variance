@@ -94,7 +94,7 @@ class TestHFGeneratorInit:
             generator = HFGenerator(_get_model_config(), gen_config)
 
         generator.tokenizer.return_value = BatchEncoding({
-            'input_ids': torch.Tensor([[0, 1]]),
+            'input_ids': torch.Tensor([[0], [1]]),
             'attention_mask': torch.flip(torch.triu(torch.ones(2, 2)), dims=[1])
         }) 
 
@@ -102,15 +102,14 @@ class TestHFGeneratorInit:
         del updated_gen_config["store_probs"]
         del updated_gen_config["labels"]
 
-        if store_probs and len(labels) == 0:
-            updated_gen_config["output_probs"] = True
-        else: 
-            updated_gen_config["output_probs"] = False
+        flag = store_probs and len(labels) == 0
+        updated_gen_config["output_probs"] = flag 
+        updated_gen_config["return_dict_in_generate"] = True
         
-        tokenizer.return_value = BatchEncoding({"input_ids": [[0], [1]]})
+        labels = [] if flag else [[0], [1]]
 
         # Assert
-        assert generator.label_index == [[0], [1]]
+        assert generator.label_index == labels
         assert generator.gen_config == updated_gen_config
 
 
