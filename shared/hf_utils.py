@@ -64,7 +64,8 @@ class HFGenerator:
 
         flag = store_probs and (len(labels) == 0)
         generation_config["output_probs"] = flag 
-        label_index = [] if flag else self.tokenizer(labels).input_ids
+        label_index = [[]] if flag else self.tokenizer(labels).input_ids
+        label_index = sum(label_index, [])
                 
         self.label_index = label_index
         self.generation_config = generation_config

@@ -106,7 +106,7 @@ class TestHFGeneratorInit:
         updated_gen_config["output_probs"] = flag 
         updated_gen_config["return_dict_in_generate"] = True
         
-        labels = [] if flag else [[0], [1]]
+        labels = [] if flag else [0, 1]
 
         # Assert
         assert generator.label_index == labels
