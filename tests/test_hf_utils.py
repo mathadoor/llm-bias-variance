@@ -61,7 +61,7 @@ class TestHFGeneratorInit:
         labels = gen_config.get("labels", [])
 
         if len(labels) > 0 and store_probs:
-            generator.tokenizer.assert_called_once_with(labels)
+            assert generator.tokenizer.call_args.args == (labels, )
 
     def test_init_model_supports_generation(self):
         # Arrange
@@ -88,15 +88,15 @@ class TestHFGeneratorInit:
         tokenizer = MagicMock(spec=PreTrainedTokenizerBase)
         gen_config = _get_generation_config(store_probs=store_probs, labels=labels)
 
+        tokenizer.return_value = BatchEncoding({
+            'input_ids': [[0], [1]],
+            'attention_mask': torch.flip(torch.triu(torch.ones(2, 2)), dims=[1])
+        }) 
     
         # Act
         with _patch_loaders(model, tokenizer):
             generator = HFGenerator(_get_model_config(), gen_config)
 
-        generator.tokenizer.return_value = BatchEncoding({
-            'input_ids': torch.Tensor([[0], [1]]),
-            'attention_mask': torch.flip(torch.triu(torch.ones(2, 2)), dims=[1])
-        }) 
 
         updated_gen_config = gen_config.copy()
         del updated_gen_config["store_probs"]
