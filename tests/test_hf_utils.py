@@ -57,8 +57,11 @@ class TestHFGeneratorInit:
         # Assert
         m_model.assert_called_once_with(config["name"], **config["model"])
         m_tok.assert_called_once_with(config["name"], **config["tokenizer"])
-        for label in gen_config.get("labels", []):
-            generator.tokenizer.assert_called_once_with(label)
+        store_probs = gen_config.get("store_probs")
+        labels = gen_config.get("labels", [])
+
+        if len(labels) > 0 and store_probs:
+            generator.tokenizer.assert_called_once_with(labels)
 
     def test_init_model_supports_generation(self):
         # Arrange
@@ -104,7 +107,7 @@ class TestHFGeneratorInit:
         else: 
             updated_gen_config["output_probs"] = False
         
-        tokenizer.return_value = [[0], [1]]
+        tokenizer.return_value = BatchEncoding({"input_ids": [[0], [1]]})
 
         # Assert
         assert generator.label_index == [[0], [1]]
