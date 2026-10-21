@@ -90,10 +90,10 @@ class TestHFGeneratorInit:
         with _patch_loaders(model, tokenizer):
             generator = HFGenerator(_get_model_config(), gen_config)
 
-        generator.tokenizer.return_value = BatchEncoding(
-            input_ids=torch.Tensor([[0, 1]]),
-            attention_mask=torch.flip(torch.triu(torch.ones(2, 2)), dims=[1])
-        )
+        generator.tokenizer.return_value = BatchEncoding({
+            'input_ids': torch.Tensor([[0, 1]]),
+            'attention_mask': torch.flip(torch.triu(torch.ones(2, 2)), dims=[1])
+        })
 
         # Assert
         updated_gen_config = gen_config.copy()
@@ -106,6 +106,8 @@ class TestHFGeneratorInit:
             else:
                 updated_gen_config["output_probs"] = False
                 updated_gen_config["label_index"] = [0, 1]
+        
+        assert generator.gen_config == updated_gen_config
 
 
     def test_init_moves_model_to_device(self):
