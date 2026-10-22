@@ -4,14 +4,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
-from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase
+from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase, AutoTokenizer, AutoModelForCausalLM
 
 from shared.hf_utils import HFGenerator, HFLogitProcessor
 
 
 def _get_model_config():
     return {
-        "name": "test",
+        "name": "HuggingFaceTB/SmolLM2-135M-Instruct",
         "device": "cpu",
         "model": {},
         "tokenizer": {"padding_side": "left"},
@@ -103,7 +103,7 @@ class TestHFGeneratorInit:
         del updated_gen_config["labels"]
 
         flag = store_probs and len(labels) == 0
-        updated_gen_config["output_probs"] = flag 
+        updated_gen_config["output_logits"] = flag 
         updated_gen_config["return_dict_in_generate"] = True
         
         labels = [] if flag else [0, 1]
@@ -156,8 +156,9 @@ def _output(**kwargs):
 class TestGenerateChat:
     def test_returns_text_tokens_and_logits(self):
         # Arrange
-        seqs, logits = torch.tensor([4, 5, 6]), (torch.rand(1, 2),)
+        seqs, logits = torch.tensor([4, 5, 6]), (torch.rand(1, 2), )
         gen, _, tok = _make_generator(_output(sequences=seqs, logits=logits))
+        expected_logits = torch.softmax(logits[0], dim=-1).unsqueeze(0)
 
         # Act
         result = gen.generate_chat(CHAT)
@@ -165,10 +166,39 @@ class TestGenerateChat:
         # Assert
         assert result["output_text"] == "decoded"
         assert torch.equal(result["output_tokens"], seqs)
-        assert result["logits"] is logits
+        assert torch.equal(result["logits"], expected_logits)
         assert torch.equal(result["input_tokens"]["input_ids"], torch.tensor([[1, 2, 3]]))
         tok.decode.assert_called_once()
         assert tok.decode.call_args.kwargs["skip_special_tokens"] is True
+
+    @pytest.mark.parametrize(
+        "store_probs, labels, o_probs_present, l_output_probs",
+        [
+            (True, ["0", "1"], True, 2), 
+            (True, [], True, -1), # -1 means vocab size length 
+            (False, ["0", "1"], False, None), 
+            (False, [], False, None)
+        ]
+    )
+    def test_chat_returns_output_probs_length(
+        self,
+        store_probs, labels, o_probs_present, l_output_probs
+    ):
+         # Arrange
+        model_config, gen_config = _get_model_config(), _get_generation_config(store_probs, labels)
+        gen = HFGenerator(model_config, gen_config)
+        expected_length = gen.tokenizer.vocab_size if l_output_probs == -1 else l_output_probs
+
+        # Act
+        result = gen.generate_chat(CHAT)
+
+        # Assert
+        if o_probs_present:
+            assert result.get("logits").size()[-1] == expected_length
+        else:
+            assert result.get("logits") is None
+        assert ("logits" in result) == o_probs_present
+
 
     def test_logits_omitted_when_not_returned(self):
         gen, _, _ = _make_generator(_output(sequences=torch.tensor([4])))
