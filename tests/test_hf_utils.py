@@ -242,9 +242,10 @@ class TestLogitProcessorCall:
             torch.tensor(scores)
         )
         stored_scores = logit_processor.get_probs()
+        # expected values are written (steps, batch, labels); get_probs is (batch, steps, labels)
         assert torch.allclose(
             stored_scores,
-            torch.tensor(result),
+            torch.tensor(result).transpose(0, 1),
             atol=1e-6
         )
         # the processor must pass the raw scores through untouched
@@ -292,13 +293,14 @@ class TestLogitProcessorCall:
         logit_processor.reset()
         post_reset_score = logit_processor.get_probs()
 
+        # expected values are written (steps, batch, labels); get_probs is (batch, steps, labels)
         assert torch.allclose(
             stored_scores,
-            torch.tensor(result),
+            torch.tensor(result).transpose(0, 1),
             atol=1e-6
         )
         assert torch.equal(
-            post_reset_score, 
+            post_reset_score,
             torch.tensor([])
         )
 
@@ -341,5 +343,5 @@ class TestLogitProcessorCall:
         subset(torch.tensor([[1], [2]]), scores)
 
         # Assert
-        assert torch.allclose(full.get_probs().sum(dim=-1), torch.ones(1, 2))
+        assert torch.allclose(full.get_probs().sum(dim=-1), torch.ones(2, 1))
         assert (subset.get_probs().sum(dim=-1) < 1).all()
