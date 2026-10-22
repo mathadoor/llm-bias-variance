@@ -1,7 +1,7 @@
 from typing import Literal, Sequence
 import torch
 from torch import Tensor, softmax
-from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase, AutoTokenizer, AutoModelForCausalLM, LogitsProcessor
+from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase, AutoTokenizer, AutoModelForCausalLM, LogitsProcessor, LogitsProcessorList
 
 class HFLogitProcessor(LogitsProcessor):
     def __init__(
@@ -18,9 +18,10 @@ class HFLogitProcessor(LogitsProcessor):
         self.probs = []
 
     def get_probs(self):
+        # (batch, steps, labels), same layout as the output_logits path
         return torch.stack(
             self.probs,
-            axis=0
+            dim=1
         ) if len(self.probs) != 0 else Tensor([])
     
     def __call__(
@@ -29,9 +30,7 @@ class HFLogitProcessor(LogitsProcessor):
         scores: Tensor
     ):
         probs = softmax(scores, axis=1)
-        self.probs.append(
-            probs[:, self.label_index].detach().cpu()
-        )
+        self.probs.append( probs[:, self.label_index].detach().cpu())
         return scores
         
 
@@ -63,12 +62,17 @@ class HFGenerator:
 
 
         flag = store_probs and (len(labels) == 0)
-        generation_config["output_probs"] = flag 
-        label_index = [[]] if flag else self.tokenizer(labels).input_ids
-        label_index = sum(label_index, [])
+        generation_config["output_logits"] = flag 
+        label_tokens = self.tokenizer(labels).input_ids if store_probs and len(labels) > 0 else []
+        # labels are single characters (0-9, A-Z): each must map to exactly one token
+        for label, token_ids in zip(labels, label_tokens):
+            if len(token_ids) != 1:
+                raise ValueError(f"Label {label!r} must tokenize to exactly one token, got {token_ids}")
+        label_index = sum(label_tokens, [])
                 
         self.label_index = label_index
         self.generation_config = generation_config
+        self.logit_processor = LogitsProcessorList([HFLogitProcessor(label_index)]) if len(label_index) != 0 else None 
 
         if not isinstance(self.tokenizer, PreTrainedTokenizerBase):
             raise TypeError(f"Incorrect tokenizer type: {type(self.tokenizer)}")
@@ -88,22 +92,30 @@ class HFGenerator:
         ).to(self.device)
 
         with torch.no_grad():
-            generated_output = self.model.generate(**tokens, **self.generation_config)
+            generated_output = self.model.generate(
+                **tokens, 
+                **self.generation_config, 
+                logits_processor=self.logit_processor
+            )
 
         logits = getattr(generated_output, "logits", None)
         generated_ids = getattr(generated_output, "sequences", None)
         if generated_ids is None:
             raise ValueError("There was no output from generate call")
-        output = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
+        # sequences include the prompt; left padding makes the prompt length identical across the batch
+        prompt_length = tokens["input_ids"].shape[1]
+        output = self.tokenizer.batch_decode(generated_ids[:, prompt_length:], skip_special_tokens=True)
 
         return_dict = {"output_text": output, "input_tokens": tokens}
 
         if logits is not None:
-            return_dict["logits"] = logits
+            return_dict["logits"] = torch.softmax(torch.stack(logits, dim=1), axis=-1)
+        
+        if self.logit_processor is not None:
+            return_dict["logits"] = self.logit_processor[0].get_probs()
+            self.logit_processor[0].reset()
 
         if generated_ids is not None:
             return_dict["output_tokens"] = generated_ids
 
         return return_dict 
-
-
