@@ -113,6 +113,14 @@ class TestHFGeneratorInit:
         assert generator.generation_config == updated_gen_config
 
 
+    @pytest.mark.parametrize("input_ids", [[[0, 1], [2]], [[0], []]])
+    def test_init_label_not_single_token_raises_error(self, input_ids):
+        tokenizer = MagicMock(spec=PreTrainedTokenizerBase)
+        tokenizer.return_value = BatchEncoding({"input_ids": input_ids})
+
+        with _patch_loaders(tokenizer=tokenizer), pytest.raises(ValueError):
+            HFGenerator(_get_model_config(), _get_generation_config())
+
     def test_init_moves_model_to_device(self):
         # Arrange
         model = MagicMock(spec=_CausalLM)
