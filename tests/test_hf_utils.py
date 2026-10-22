@@ -144,7 +144,7 @@ def _make_generator(generate_output):
     model.generate.return_value = generate_output
     tokenizer = MagicMock(spec=PreTrainedTokenizerBase)
     tokenizer.apply_chat_template.return_value = BatchEncoding({"input_ids": torch.tensor([[1, 2, 3]])})
-    tokenizer.decode.return_value = "decoded"
+    tokenizer.batch_decode.return_value = ["decoded"]
     with _patch_loaders(model, tokenizer):
         return HFGenerator(_get_model_config(), _get_generation_config()), model, tokenizer
 
@@ -156,7 +156,8 @@ def _output(**kwargs):
 class TestGenerateChat:
     def test_returns_text_tokens_and_logits(self):
         # Arrange
-        seqs, logits = torch.tensor([4, 5, 6]), (torch.rand(1, 2), )
+        # prompt is [1, 2, 3]; sequences = prompt + 3 generated tokens
+        seqs, logits = torch.tensor([[1, 2, 3, 4, 5, 6]]), (torch.rand(1, 2), )
         gen, _, tok = _make_generator(_output(sequences=seqs, logits=logits))
         expected_logits = torch.softmax(logits[0], dim=-1).unsqueeze(0)
 
@@ -164,12 +165,14 @@ class TestGenerateChat:
         result = gen.generate_chat(CHAT)
 
         # Assert
-        assert result["output_text"] == "decoded"
+        assert result["output_text"] == ["decoded"]
         assert torch.equal(result["output_tokens"], seqs)
         assert torch.equal(result["logits"], expected_logits)
         assert torch.equal(result["input_tokens"]["input_ids"], torch.tensor([[1, 2, 3]]))
-        tok.decode.assert_called_once()
-        assert tok.decode.call_args.kwargs["skip_special_tokens"] is True
+        tok.batch_decode.assert_called_once()
+        # only the generated part is decoded, not the prompt
+        assert torch.equal(tok.batch_decode.call_args.args[0], seqs[:, 3:])
+        assert tok.batch_decode.call_args.kwargs["skip_special_tokens"] is True
 
     @pytest.mark.parametrize(
         "store_probs, labels, o_probs_present, l_output_probs",
@@ -201,7 +204,7 @@ class TestGenerateChat:
 
 
     def test_logits_omitted_when_not_returned(self):
-        gen, _, _ = _make_generator(_output(sequences=torch.tensor([4])))
+        gen, _, _ = _make_generator(_output(sequences=torch.tensor([[1, 2, 3, 4]])))
 
         result = gen.generate_chat(CHAT)
 
@@ -216,7 +219,7 @@ class TestGenerateChat:
         
     @pytest.mark.parametrize("chat", [CHAT[0], CHAT])
     def test_accepts_single_message_or_list(self, chat):
-        gen, _, tok = _make_generator(_output(sequences=torch.tensor([4])))
+        gen, _, tok = _make_generator(_output(sequences=torch.tensor([[1, 2, 3, 4]])))
 
         gen.generate_chat(chat)
 
