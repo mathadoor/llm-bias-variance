@@ -174,7 +174,7 @@ class TestGenerateChat:
 
         # Assert
         assert result["output_text"] == ["decoded"]
-        assert torch.equal(result["output_tokens"], seqs)
+        assert torch.equal(result["output_tokens"], seqs[:, 3:])
         assert torch.equal(result["logits"], expected_logits)
         assert torch.equal(result["input_tokens"]["input_ids"], torch.tensor([[1, 2, 3]]))
         tok.batch_decode.assert_called_once()

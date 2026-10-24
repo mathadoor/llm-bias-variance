@@ -116,6 +116,6 @@ class HFGenerator:
             self.logit_processor[0].reset()
 
         if generated_ids is not None:
-            return_dict["output_tokens"] = generated_ids
+            return_dict["output_tokens"] = generated_ids[:, prompt_length:]
 
         return return_dict 
