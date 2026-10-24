@@ -125,7 +125,14 @@ class HFGenerator:
         label_header: str,
         output_dict: dict
     ) -> Tensor:
-        """
-        Returns label logits
-        """
-        raise NotImplementedError    
+        decode = lambda ids: self.tokenizer.decode(ids, skip_special_tokens=True)
+        rows = []
+        for tokens, probs in zip(output_dict["output_tokens"], output_dict["logits"]):
+            end = decode(tokens).index(label_header) + len(label_header)
+            for i in range(len(tokens)):
+                if len(decode(tokens[:i])) >= end and decode(tokens[:i + 1])[end:].strip():
+                    rows.append(probs[i])
+                    break
+            else:
+                raise ValueError(f"No token found after header {label_header!r}")
+        return torch.stack(rows)

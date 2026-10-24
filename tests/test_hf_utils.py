@@ -146,13 +146,13 @@ class TestHFGeneratorInit:
 CHAT = [{"role": "user", "content": "hi"}]
 
 
-def _make_generator(generate_output):
+def _make_generator(generate_output, output=["decoded"], input_ids=torch.tensor([[1, 2, 3]])):
     """Build an HFGenerator whose tokenizer/model are mocks returning `generate_output`."""
     model = MagicMock(spec=_CausalLM)
     model.generate.return_value = generate_output
     tokenizer = MagicMock(spec=PreTrainedTokenizerBase)
-    tokenizer.apply_chat_template.return_value = BatchEncoding({"input_ids": torch.tensor([[1, 2, 3]])})
-    tokenizer.batch_decode.return_value = ["decoded"]
+    tokenizer.apply_chat_template.return_value = BatchEncoding({"input_ids": input_ids})
+    tokenizer.batch_decode.return_value = output
     with _patch_loaders(model, tokenizer):
         return HFGenerator(_get_model_config(), _get_generation_config()), model, tokenizer
 
@@ -232,6 +232,29 @@ class TestGenerateChat:
         gen.generate_chat(chat)
 
         assert tok.apply_chat_template.call_args.args[0] is chat
+
+
+def test_get_label_logits_returns_correct_probs():
+    # Arrange
+    pieces = ["positive sentiment.", " 0 is", " the label", ". ###", " output", " 1", " hello"]
+    output_text = ["".join(pieces)]          
+    output_tokens = torch.arange(4, 11).unsqueeze(0)   
+    gen, _, tokenizer = _make_generator(_output(sequences=torch.zeros(1, 3)))  
+
+    tokenizer.decode.side_effect = lambda ids, **kw: "".join(pieces[: len(ids)])
+    output_dict = gen.generate_chat("chat")
+
+    torch.manual_seed(0)
+    logits = torch.softmax(torch.rand(1, 7, 2), dim=-1)  
+    output_dict = {"output_text": output_text, "output_tokens": output_tokens, "logits": logits}
+
+    # Act
+    result = gen.get_label_logits("### output", output_dict)
+
+    # Assert: header ends after " output" (step 4), so the answer is step 5
+    assert torch.equal(result, logits[:, 5, :])
+
+
 
 class TestLogitProcessorCall:
 
