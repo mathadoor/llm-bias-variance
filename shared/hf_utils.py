@@ -110,12 +110,22 @@ class HFGenerator:
 
         if logits is not None:
             return_dict["logits"] = torch.softmax(torch.stack(logits, dim=1), axis=-1)
-        
+       
+        if generated_ids is not None:
+            return_dict["output_tokens"] = generated_ids[:, prompt_length:]
+ 
         if self.logit_processor is not None:
             return_dict["logits"] = self.logit_processor[0].get_probs()
             self.logit_processor[0].reset()
 
-        if generated_ids is not None:
-            return_dict["output_tokens"] = generated_ids[:, prompt_length:]
-
         return return_dict 
+
+    def get_label_logits(
+        self,
+        label_header: str,
+        output_dict: dict
+    ) -> Tensor:
+        """
+        Returns label logits
+        """
+        raise NotImplementedError    

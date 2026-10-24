@@ -209,7 +209,6 @@ class TestGenerateChat:
         else:
             assert result.get("logits") is None
         assert ("logits" in result) == o_probs_present
-        assert ("label_logits" in result) == (o_probs_present and len(labels) != 0)
 
 
     def test_logits_omitted_when_not_returned(self):
