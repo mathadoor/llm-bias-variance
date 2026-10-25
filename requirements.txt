@@ -11,3 +11,4 @@ scikit-learn==1.9.1
 torch==2.14.1
 tqdm==4.70.1
 transformers==5.19.0
+dspy-ai==3.4.1
