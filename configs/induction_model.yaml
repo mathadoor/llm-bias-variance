@@ -1,0 +1,4 @@
+name: vertex_ai/gemini-3-flash
+params:
+  temperature: 1
+  max_tokens: 1000
