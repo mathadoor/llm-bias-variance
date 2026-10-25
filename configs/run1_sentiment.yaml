@@ -1,6 +1,7 @@
 # Run 1: simplest task to get signal on the pipeline and the hypothesis
 dataset: 
     name: ajaykarthick/imdb-movie-reviews   # for sentiment analysis
+    train_split: 0.7
 model:
     name: Qwen/Qwen3-0.6B
 metric: accuracy
@@ -13,6 +14,7 @@ generation:
     num_beams: 1
 train:
     num_samples: [1, 3, 5, 10, 20, 50]
+    num_runs_per_size: 3
 validation:
     batch_size: 32
     num_traces: 100   # per correct / incorrect group
