@@ -1,7 +1,12 @@
+from contextlib import contextmanager
+from types import SimpleNamespace
+from unittest.mock import patch
+
+import numpy as np
 import pytest
 from datasets import Dataset
 
-from scripts.get_induction_prompt import create_runs
+from scripts.get_induction_prompt import create_runs, generate_induction_prompts
 
 
 @pytest.fixture
@@ -47,3 +52,97 @@ class TestCreateRuns:
         # columns are the runs
         runs = [[row["id"] for row in samples] for samples in run.T]
         assert len({tuple(r) for r in runs}) == len(runs)
+
+
+
+def _make_runs(train_sizes, num_runs):
+    # same layout as create_runs: (train_size, num_runs), each column is one run
+    runs = []
+    for size in train_sizes:
+        data = np.empty((size, num_runs), dtype=object)
+        for row in range(size):
+            for col in range(num_runs):
+                data[row, col] = {"id": 1000 * size + 100 * col + row}
+        runs.append({"train_size": size, "dataset": data})
+    return runs
+
+
+def _run_ids(run):
+    return [tuple(sample["id"] for sample in column) for column in run["dataset"].T]
+
+
+@pytest.fixture
+def fake_module():
+    calls = []
+
+    def module(samples):
+        calls.append(samples)
+        return SimpleNamespace(output_prompt="prompt-" + "-".join(str(s["id"]) for s in samples))
+
+    with patch("scripts.get_induction_prompt.dspy.ChainOfThought", return_value=module):
+        yield calls
+
+
+@pytest.fixture
+def fake_context():
+    used = {}
+
+    @contextmanager
+    def context(**kwargs):
+        used.update(kwargs)
+        yield
+
+    with patch("scripts.get_induction_prompt.dspy.context", side_effect=context):
+        yield used
+
+
+@pytest.mark.usefixtures("fake_context")
+class TestGenerateInductionPrompts:
+
+    def test_no_runs_returns_no_results(self, fake_module):
+        results = generate_induction_prompts([], lm=object())
+
+        assert results == []
+        assert fake_module == []
+
+    def test_one_result_per_run(self, fake_module):
+        runs = _make_runs(train_sizes=[2, 3], num_runs=4)
+
+        results = generate_induction_prompts(runs, lm=object())
+
+        assert len(results) == 8
+        assert sorted(r["train_size"] for r in results) == [2] * 4 + [3] * 4
+
+    def test_module_receives_the_samples_of_each_run(self, fake_module):
+        runs = _make_runs(train_sizes=[2, 3], num_runs=4)
+
+        generate_induction_prompts(runs, lm=object())
+
+        expected = {ids for run in runs for ids in _run_ids(run)}
+        assert {tuple(s["id"] for s in call) for call in fake_module} == expected
+        assert all(isinstance(call, list) for call in fake_module)
+
+    def test_each_result_pairs_train_size_samples_and_module_output(self, fake_module):
+        runs = _make_runs(train_sizes=[2, 3], num_runs=2)
+
+        results = generate_induction_prompts(runs, lm=object())
+
+        for result in results:
+            ids = tuple(s["id"] for s in result["dataset"])
+            assert len(ids) == result["train_size"]
+            assert result["results"].output_prompt == "prompt-" + "-".join(map(str, ids))
+
+    def test_uses_the_provided_lm(self, fake_module, fake_context):
+        lm = object()
+
+        generate_induction_prompts(_make_runs([2], 1), lm=lm)
+
+        assert fake_context["lm"] is lm
+
+    def test_module_error_propagates(self):
+        def failing(samples):
+            raise RuntimeError("lm failed")
+
+        with patch("scripts.get_induction_prompt.dspy.ChainOfThought", return_value=failing):
+            with pytest.raises(RuntimeError, match="lm failed"):
+                generate_induction_prompts(_make_runs([2], 1), lm=object())
