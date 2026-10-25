@@ -1,4 +1,4 @@
-datasets=5.1.0
+datasets==5.1.0
 jupyterlab==4.6.4
 litellm==1.104.2
 matplotlib==3.11.2

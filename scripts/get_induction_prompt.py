@@ -1,5 +1,9 @@
 import yaml
 import argparse
+import textwrap
+from collections import Counter
+from datetime import datetime
+from pathlib import Path
 import numpy as np 
 from datasets import Dataset
 from shared import utils, hf_utils
@@ -9,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 class InductionPromptSignature(dspy.Signature):
     """
     You are given a list of inputs and outputs pertaining to the task of classifying the sentiment of a movie review. 
-    Your task is to write a prompt for an LLM to correctly perform zero-shot classification of any movie review based on the 
+    Your task is to write instructions for an LLM to correctly perform zero-shot classification of any movie review based on the 
     patterns in these samples.
     """
     selected_samples: list[dict] = dspy.InputField(desc="list of sample dictionary with sample and label. 0 for negative and 1 for positive")
@@ -46,12 +50,17 @@ def generate_induction_prompts(
     lm: dspy.LM
 ):
     module = dspy.ChainOfThought(InductionPromptSignature)
+
+    def run(samples):
+        with dspy.context(lm=lm):
+            return module(selected_samples=samples)
+
     futures = {} 
-    with dspy.context(lm=lm), ThreadPoolExecutor(max_workers=32) as executor:
+    with ThreadPoolExecutor(max_workers=32) as executor:
         for train_size_run in runs:
             train_size = train_size_run["train_size"]
             futures.update({
-                executor.submit(module, list(dataset)): (train_size, list(dataset))
+                executor.submit(run, list(dataset)): (train_size, list(dataset))
                 for dataset in train_size_run["dataset"].T
             })
 
@@ -66,6 +75,34 @@ def generate_induction_prompts(
         })
 
     return results
+
+def format_samples(samples: list[dict]) -> str:
+    blocks = []
+    for i, sample in enumerate(samples, start=1):
+        lines = [f"--- sample {i} ---"]
+        lines += [textwrap.fill(f"{key}: {value}", width=100) for key, value in sample.items()]
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks) + "\n"
+
+def save_prompts(
+    results: list[dict],
+    output_dir: Path
+) -> Path:
+    # <output_dir>/<date_time>/<train_size>/<run_index>/{prompts,selected_samples}.txt
+    root = Path(output_dir) / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    root.mkdir(parents=True, exist_ok=True)
+
+    # run index is just a counter per train size, any run may get any index
+    run_counts = Counter()
+    for result in results:
+        run_index = run_counts[result["train_size"]]
+        run_counts[result["train_size"]] += 1
+        run_dir = root / str(result["train_size"]) / str(run_index)
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "prompts.txt").write_text(result["results"].output_prompt + "\n", encoding="utf-8")
+        (run_dir / "selected_samples.txt").write_text(format_samples(result["dataset"]), encoding="utf-8")
+
+    return root
 
 if __name__ == "__main__":
     # load config 
@@ -100,3 +137,8 @@ if __name__ == "__main__":
     ) 
 
     lm = get_dspy_lm(induction_config)
+    prompts = generate_induction_prompts(run_datasets, lm)
+
+    # save prompts
+    output_path = save_prompts(prompts, Path(__file__).parent.parent / "output")
+    print(f"Saved {len(prompts)} prompts to {output_path}")

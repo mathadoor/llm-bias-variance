@@ -1,3 +1,4 @@
+import re
 from contextlib import contextmanager
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -6,7 +7,7 @@ import numpy as np
 import pytest
 from datasets import Dataset
 
-from scripts.get_induction_prompt import create_runs, generate_induction_prompts
+from scripts.get_induction_prompt import create_runs, generate_induction_prompts, save_prompts
 
 
 @pytest.fixture
@@ -75,9 +76,10 @@ def _run_ids(run):
 def fake_module():
     calls = []
 
-    def module(samples):
-        calls.append(samples)
-        return SimpleNamespace(output_prompt="prompt-" + "-".join(str(s["id"]) for s in samples))
+    # keyword-only, like dspy modules
+    def module(*, selected_samples):
+        calls.append(selected_samples)
+        return SimpleNamespace(output_prompt="prompt-" + "-".join(str(s["id"]) for s in selected_samples))
 
     with patch("scripts.get_induction_prompt.dspy.ChainOfThought", return_value=module):
         yield calls
@@ -85,11 +87,11 @@ def fake_module():
 
 @pytest.fixture
 def fake_context():
-    used = {}
+    used = []
 
     @contextmanager
     def context(**kwargs):
-        used.update(kwargs)
+        used.append(kwargs)
         yield
 
     with patch("scripts.get_induction_prompt.dspy.context", side_effect=context):
@@ -132,17 +134,52 @@ class TestGenerateInductionPrompts:
             assert len(ids) == result["train_size"]
             assert result["results"].output_prompt == "prompt-" + "-".join(map(str, ids))
 
-    def test_uses_the_provided_lm(self, fake_module, fake_context):
+    def test_every_run_is_executed_inside_the_lm_context(self, fake_module, fake_context):
         lm = object()
 
-        generate_induction_prompts(_make_runs([2], 1), lm=lm)
+        generate_induction_prompts(_make_runs([2], 3), lm=lm)
 
-        assert fake_context["lm"] is lm
+        assert len(fake_context) == 3
+        assert all(kwargs["lm"] is lm for kwargs in fake_context)
 
     def test_module_error_propagates(self):
-        def failing(samples):
+        def failing(*, selected_samples):
             raise RuntimeError("lm failed")
 
         with patch("scripts.get_induction_prompt.dspy.ChainOfThought", return_value=failing):
             with pytest.raises(RuntimeError, match="lm failed"):
                 generate_induction_prompts(_make_runs([2], 1), lm=object())
+
+
+def _result(train_size, prompt, samples=()):
+    return {
+        "train_size": train_size,
+        "dataset": list(samples),
+        "results": SimpleNamespace(output_prompt=prompt),
+    }
+
+
+class TestSavePrompts:
+
+    def test_writes_prompt_and_samples_under_date_time_train_size_run_index(self, tmp_path):
+        samples = [{"review": "great film " * 30, "label": 1}, {"review": "dull", "label": 0}]
+        results = [_result(5, "first", samples), _result(5, "Classify the review.\nAnswer 0 or 1."), _result(1, "other")]
+
+        root = save_prompts(results, tmp_path)
+
+        assert root.parent == tmp_path
+        assert re.fullmatch(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}", root.name)
+        run_dir = root / "5" / "0"
+        assert (run_dir / "prompts.txt").read_text(encoding="utf-8") == "first\n"
+        text = (run_dir / "selected_samples.txt").read_text(encoding="utf-8")
+        assert text.startswith("--- sample 1 ---\nreview: great film")
+        assert "--- sample 2 ---\nreview: dull\nlabel: 0\n" in text
+        assert max(len(line) for line in text.splitlines()) <= 100  # long reviews are wrapped
+        assert (root / "5" / "1" / "prompts.txt").read_text(encoding="utf-8") == "Classify the review.\nAnswer 0 or 1.\n"
+        assert (root / "1" / "0" / "prompts.txt").read_text(encoding="utf-8") == "other\n"
+
+    def test_no_results_creates_only_the_date_time_directory(self, tmp_path):
+        root = save_prompts([], tmp_path)
+
+        assert root.is_dir()
+        assert list(root.iterdir()) == []

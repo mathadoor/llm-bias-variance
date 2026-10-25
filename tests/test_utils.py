@@ -85,9 +85,9 @@ class TestComputeBrierScore:
             utils.compute_brier_decomposition(P, O)
         assert "First dimension of P and O must match" in str(info.value)
 
-@pytest.mark.parametrize("path", ["test.yaml", "big_config/test.yaml"])
-def test_load_config(path):
+def test_load_config(tmp_path):
 
+    path = tmp_path / "config.yaml"
     og_config = {
         "key1": "value1",
         "key2": {
