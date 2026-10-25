@@ -14,9 +14,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    # load configs
     task_config = utils.load_config(args.task_config)
     induction_config = utils.load_config(args.induction_config)
 
-
-    print(task_config)
-    print(induction_config)
+    # loading dataset 
+    

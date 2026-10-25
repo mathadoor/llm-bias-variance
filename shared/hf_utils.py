@@ -2,6 +2,33 @@ from typing import Literal, Sequence
 import torch
 from torch import Tensor, softmax
 from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase, AutoTokenizer, AutoModelForCausalLM, LogitsProcessor, LogitsProcessorList
+import datasets
+
+def load_hf_dataset(
+    name: str,
+    train_split: float, 
+    seed: int
+):
+    if not isinstance(train_split, float):
+        raise TypeError(f"Train split must be a float. got {type(train_split)}")
+
+    if not (0 < train_split <= 1): 
+        raise ValueError(f"train_split must be in (0, 1], got {train_split}")
+
+    dataset = datasets.load_dataset(name)
+    if train_split == 1:
+        return {
+            "train": dataset["train"],
+            "val": None,
+            "test": dataset["test"]
+        }
+
+    split = dataset["train"].train_test_split(train_size=train_split, seed=seed)
+    return {
+        "train": split['train'],
+        "val": split['test'],
+        "test": dataset['test']
+    }
 
 class HFLogitProcessor(LogitsProcessor):
     def __init__(

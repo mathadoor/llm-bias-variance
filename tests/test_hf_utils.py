@@ -4,9 +4,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
+from datasets import Dataset, DatasetDict
 from transformers import BatchEncoding, GenerationMixin, PreTrainedTokenizerBase, AutoTokenizer, AutoModelForCausalLM
 
-from shared.hf_utils import HFGenerator, HFLogitProcessor
+from shared.hf_utils import HFGenerator, HFLogitProcessor, load_hf_dataset
 
 
 def _get_model_config():
@@ -379,3 +380,56 @@ class TestLogitProcessorCall:
         # Assert
         assert torch.allclose(full.get_probs().sum(dim=-1), torch.ones(2, 1))
         assert (subset.get_probs().sum(dim=-1) < 1).all()
+
+
+def _fake_dataset(n_train=100, n_test=20):
+    return DatasetDict({
+        "train": Dataset.from_dict({"id": list(range(n_train))}),
+        "test": Dataset.from_dict({"id": list(range(1000, 1000 + n_test))}),
+    })
+
+
+@pytest.fixture
+def fake_load_dataset():
+    with patch("shared.hf_utils.datasets.load_dataset", side_effect=lambda name: _fake_dataset()) as mock:
+        yield mock
+
+
+@pytest.mark.usefixtures("fake_load_dataset")
+class TestLoadHFDataset:
+
+    @pytest.mark.parametrize("train_split", [0.0, -0.5, 1.5, float("nan")])
+    def test_out_of_range_train_split_raises_value_error(self, train_split):
+        with pytest.raises(ValueError):
+            load_hf_dataset("dummy", train_split, seed=0)
+
+    @pytest.mark.parametrize("train_split", [1, "0.8", None, [0.8]])
+    def test_non_float_train_split_raises_type_error(self, train_split):
+        with pytest.raises(TypeError):
+            load_hf_dataset("dummy", train_split, seed=0)
+
+    @pytest.mark.parametrize(
+        "train_split, n_train, n_val",
+        [(0.8, 80, 20), (0.5, 50, 50), (0.25, 25, 75), (1.0, 100, None)],  
+    )
+    def test_split_sizes(self, train_split, n_train, n_val):
+        splits = load_hf_dataset("dummy", train_split, seed=0)
+
+        assert len(splits["train"]) == n_train
+        assert len(splits["test"]) == 20
+        assert len(splits["val"]) == n_val if n_val else splits["val"] is None 
+
+    def test_split_is_identical_across_repeated_calls(self):
+        first = load_hf_dataset("dummy", 0.8, seed=42)
+
+        for _ in range(3):
+            other = load_hf_dataset("dummy", 0.8, seed=42)
+            assert first["train"]["id"] == other["train"]["id"]
+            assert first["val"]["id"] == other["val"]["id"]
+            assert first["test"]["id"] == other["test"]["id"]
+
+    def test_different_seeds_give_different_splits(self):
+        a = load_hf_dataset("dummy", 0.8, seed=1)
+        b = load_hf_dataset("dummy", 0.8, seed=2)
+
+        assert a["train"]["id"] != b["train"]["id"]
