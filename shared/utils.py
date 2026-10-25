@@ -1,4 +1,7 @@
+import yaml
+from pathlib import Path
 from torch import Tensor
+
 def coerce_numeric(text: str, strict=False, placeholder=-1) -> float | int:
     try:
         return int(text)
@@ -16,6 +19,11 @@ def prep_messages(system_message: str, user_message: str) -> list[dict[str, str]
         {"role": "system", "content": system_message},
         {"role": "user", "content": user_message}
     ]
+
+def load_config(config_path: str):
+    path = Path(__file__).parent.parent / "configs" / config_path
+    return yaml.safe_load(path.read_bytes())
+    
 
 def compute_brier_decomposition(
     P: Tensor | list,

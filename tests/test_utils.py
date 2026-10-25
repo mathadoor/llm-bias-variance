@@ -1,5 +1,8 @@
 import pytest
 import math
+import yaml
+from pathlib import Path
+import os
 from torch import Tensor, rand, floor
 from shared import utils
 
@@ -81,3 +84,27 @@ class TestComputeBrierScore:
         with pytest.raises(ValueError) as info:
             utils.compute_brier_decomposition(P, O)
         assert "First dimension of P and O must match" in str(info.value)
+
+@pytest.mark.parametrize("path", ["test.yaml", "big_config/test.yaml"])
+def test_load_config(path):
+
+    og_config = {
+        "key1": "value1",
+        "key2": {
+            "nested_key": "value2"
+        }
+    }
+
+    full_path = Path(__file__).parent.parent / "configs" / path
+    full_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(full_path, "w") as f:
+        f.writelines(yaml.dump(og_config))
+
+    try:
+        config = utils.load_config(path)
+    except:
+        config = {}
+
+    Path(full_path).unlink(missing_ok=True)
+
+    assert og_config == config
