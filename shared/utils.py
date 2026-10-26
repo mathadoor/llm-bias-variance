@@ -23,7 +23,21 @@ def prep_messages(system_message: str, user_message: str) -> list[dict[str, str]
 def load_config(config_path: str):
     path = Path(__file__).parent.parent / "configs" / config_path
     return yaml.safe_load(path.read_bytes())
-    
+
+def _numbered_dirs(path: Path) -> list[Path]:
+    return sorted((p for p in path.iterdir() if p.is_dir() and p.name.isdigit()), key=lambda p: int(p.name))
+
+def load_prompts(prompts_path: str) -> dict[int, list[str]]:
+    root = Path(__file__).parent.parent / "prompts" / prompts_path
+    if not root.is_dir():
+        raise FileNotFoundError(f"Prompts folder not found: {root}")
+    return {
+        int(size_dir.name): [
+            (run_dir / "prompts.txt").read_text(encoding="utf-8").strip()
+            for run_dir in _numbered_dirs(size_dir)
+        ]
+        for size_dir in _numbered_dirs(root)
+    }
 
 def compute_brier_decomposition(
     P: Tensor | list,

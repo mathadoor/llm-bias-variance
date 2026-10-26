@@ -3,6 +3,8 @@ import math
 import yaml
 from pathlib import Path
 import os
+import shutil
+import tempfile
 from torch import Tensor, rand, floor
 from shared import utils
 
@@ -108,3 +110,40 @@ def test_load_config(tmp_path):
     Path(full_path).unlink(missing_ok=True)
 
     assert og_config == config
+
+
+@pytest.fixture
+def prompts_dir():
+    root = Path(__file__).parent.parent / "prompts"
+    root.mkdir(exist_ok=True)
+    path = Path(tempfile.mkdtemp(dir=root, prefix="test_"))
+    yield path
+    shutil.rmtree(path, ignore_errors=True)
+
+
+class TestLoadPrompts:
+
+    def test_returns_prompts_per_train_size_ordered_by_run_index(self, prompts_dir):
+        for size, run, prompt in [(10, 0, "ten-0"), (10, 2, "ten-2"), (10, 1, "ten-1"), (5, 0, "five-0")]:
+            run_dir = prompts_dir / str(size) / str(run)
+            run_dir.mkdir(parents=True)
+            (run_dir / "prompts.txt").write_text(prompt + "\n", encoding="utf-8")
+            (run_dir / "selected_samples.txt").write_text("ignored", encoding="utf-8")
+
+        prompts = utils.load_prompts(prompts_dir.name)
+
+        assert prompts == {5: ["five-0"], 10: ["ten-0", "ten-1", "ten-2"]}
+        assert list(prompts) == [5, 10]  # numeric, not lexicographic, order
+
+    def test_keeps_multiline_prompts_and_ignores_unrelated_entries(self, prompts_dir):
+        run_dir = prompts_dir / "1" / "0"
+        run_dir.mkdir(parents=True)
+        (run_dir / "prompts.txt").write_text("line one\nline two\n", encoding="utf-8")
+        (prompts_dir / "notes.txt").write_text("not a train size")
+        (prompts_dir / "tmp").mkdir()
+
+        assert utils.load_prompts(prompts_dir.name) == {1: ["line one\nline two"]}
+
+    def test_missing_folder_raises(self, prompts_dir):
+        with pytest.raises(FileNotFoundError):
+            utils.load_prompts(prompts_dir.name + "/missing")
