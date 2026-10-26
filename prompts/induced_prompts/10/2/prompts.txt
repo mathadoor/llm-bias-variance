@@ -17,6 +17,3 @@ Analyze the review and determine the appropriate classification based on the fol
 ### Output Instructions:
 - Carefully evaluate the overall sentiment of the review.
 - Output ONLY the single digit `0` or `1` corresponding to the classification, with no extra characters or explanation.
-
-Review to classify:
-{review}

@@ -10,5 +10,4 @@ Assign 1 (Negative) if the review:
 - Employs severe criticism regarding acting, plot, or execution ('horrible', 'terrible', 'formulaic', 'senseless').
 - Uses sarcastic mockery (e.g., 'Oooohhh...scary!') or faint, superficial praise that barely keeps the movie from receiving the lowest possible rating (e.g., 'saved from a "1" by the presence of...').
 
-Input Review: {review}
-Output (0 or 1):
+Output only a single digit: `0` for positive sentiment or `1` for negative sentiment.

@@ -19,6 +19,3 @@ Read the provided movie review carefully and evaluate the overall sentiment expr
 
 ### Output Format:
 Output solely `0` or `1` with no additional explanation, commentary, or punctuation.
-
-Review to classify:
-{review}

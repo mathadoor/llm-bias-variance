@@ -18,6 +18,3 @@ Respond with ONLY a single digit:
 - Direct warnings against watching (e.g., "Avoid this film", "Skip it", "not worth spending either money or time", "nothing to recommend").
 - Low numerical scores or harsh comparisons (e.g., "2/10", "worst movie I have seen", "makes my list of the 10 worst").
 - Even if a positive aspect is mentioned (such as a single decent actor or good scenery), it is heavily outweighed by widespread criticism and a concluding negative assessment.
-
-Review to classify:
-[INSERT MOVIE REVIEW HERE]

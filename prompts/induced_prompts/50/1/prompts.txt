@@ -19,6 +19,3 @@ Analyze the sentiment of the provided movie review and classify it into one of t
 
 ### Output Format:
 Output only the single digit `0` or `1` corresponding to the correct sentiment, with no surrounding text, punctuation, or explanation.
-
-Review: {review}
-Sentiment: <0 or 1>
