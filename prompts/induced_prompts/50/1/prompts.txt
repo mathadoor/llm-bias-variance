@@ -1,0 +1,24 @@
+Analyze the sentiment of the provided movie review and classify it into one of the following numeric labels:
+- `0`: Positive sentiment
+- `1`: Negative sentiment
+
+### Classification Guidelines & Patterns:
+
+#### Classify as `0` (Positive) if the review:
+- Praises core elements of the film such as acting, directing, plot, emotional depth, or visual style (e.g., "superb performance", "beautifully crafted", "exceptionally well-written", "talented director", "lovely poetic movie").
+- Strongly recommends the film or series (e.g., "must see", "must-own", "highly recommend", "well worth seeing", "definitely a keeper", "go see it").
+- Expresses personal enjoyment, high engagement, or awards favorable ratings (e.g., "hugely enjoyable", "quite pleased with the final product", "7/10", "8.5/10").
+- Contains minor criticisms (such as a disappointing ending, lengthy runtime, or flawed technical aspects) but maintains an overarching positive appreciation and verdict.
+
+#### Classify as `1` (Negative) if the review:
+- Uses strongly derogatory expressions or condemns the production quality (e.g., "plain sucks", "utter rubbish", "dreadful", "garbage in its purest form", "sorry excuse for film making", "waste of time").
+- Emphasizes severe flaws such as lack of plot, atrocious acting, terrible sound/music, uninspired cinematography, or deep boredom (e.g., "confusing mess", "extremely boring", "incompetence", "wooden").
+- Explicitly warns viewers away (e.g., "do not watch", "couldn't possibly recommend", "definitely not worth spending either money or time", "should be avoided").
+- Assigns low ratings (e.g., "1/10", "2/10", "4 out of 10", "one star").
+- Notes that the film is laughably bad, unintentionally hilarious, or a failed sequel/spin-off that falls far short of expectations.
+
+### Output Format:
+Output only the single digit `0` or `1` corresponding to the correct sentiment, with no surrounding text, punctuation, or explanation.
+
+Review: {review}
+Sentiment: <0 or 1>

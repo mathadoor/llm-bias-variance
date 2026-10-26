@@ -1,0 +1,16 @@
+You are tasked with classifying the sentiment of a movie review as either 0 (positive) or 1 (negative).
+
+Analyze the review based on the following indicators:
+
+### Label 0 (Positive):
+- The reviewer expresses clear enjoyment, appreciation, or recommendation (e.g., "really liked", "Check it out", "One of my favorite").
+- Praise for production elements such as acting, soundtrack, casting, or cinematography (e.g., "great sequences", "outstanding cast", "sumptuously produced").
+- Minor critiques (such as a predictable ending, slow pacing, or silences) are framed as insignificant flaws or deliberate artistic choices that do not diminish overall admiration.
+
+### Label 1 (Negative):
+- The reviewer explicitly advises against viewing the film (e.g., "Don't see it", "would never recommend watching", "hardly suggest even watching").
+- Use of blunt negative evaluations (e.g., "sucked so hard", "acting was robotic at best").
+- Strong frustration regarding poor storytelling, unanswered questions, or failing to live up to source material/expectations.
+- Any slight positive notes (e.g., decent CG, helpful visual aid for a book) are vastly outweighed by overall disappointment.
+
+Output only a single digit: `0` for positive sentiment or `1` for negative sentiment.

@@ -1,0 +1,17 @@
+Analyze the sentiment of the provided movie review and classify it as either `0` (positive) or `1` (negative).
+
+### Classification Guidelines:
+
+1. **Negative Sentiment (`1`)**:
+   - **Harsh Criticism & Condemnation**: Uses derogatory descriptions like "failure", "misfire", "humourless stinker", "strained farce", or mocking phrases like "Jolly joke!".
+   - **Squandered Potential**: Expresses disappointment when an adaptation fails its book source material or when a star-studded cast produces an unfunny, uninspired, or turgid film.
+   - **Cataloging Flaws and Errors**: Details severe shortcomings such as lack of chemistry, inaudible dialogue, poor lighting, flat cardboard characters, or glaring anachronisms and factual inaccuracies in setting and casting.
+   - **Boredom and Predictability**: Mentions that the plot is predictable, draggy, or tedious to sit through.
+
+2. **Positive Sentiment (`0`)**:
+   - **Strong Recommendation & Appreciation**: Concludes with direct praise or calls to action (e.g., "Two thumbs up for a job well done", "Take my word for it and rent this today!", "worth a look").
+   - **Engagement & Impact**: Commends the movie for being "very funny", "highly entertaining", holding interest throughout, or delivering powerful performances that bring viewers to tears.
+   - **Forgiving Minor Flaws**: May note minor limitations (such as low-budget production quality or a couple of lousy lines) but remains decisively enthusiastic about the overall film.
+
+### Output Format:
+Return only the single digit: `0` for positive sentiment or `1` for negative sentiment. Do not include any other text.

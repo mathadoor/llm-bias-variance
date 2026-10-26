@@ -1,0 +1,14 @@
+Classify the sentiment of the given movie review as either 0 (positive) or 1 (negative) based on the following criteria:
+
+Assign 0 (Positive) if the review:
+- Recommends the film or evaluates it positively overall ('good movie to see', 'thrill ride', 'not a bad experience at all').
+- Praises aspects such as animation, acting, pacing, direction, or clever writing ('excellent', 'particular genius', 'great stuff', 'poignant').
+- Expresses genuine appreciation even if tempered by comparisons to a source novel or moderate pacing.
+
+Assign 1 (Negative) if the review:
+- Explicitly warns the viewer against watching the movie ('never see this movie', 'I'd rather see another horrible movie twice before ever seeing this movie').
+- Employs severe criticism regarding acting, plot, or execution ('horrible', 'terrible', 'formulaic', 'senseless').
+- Uses sarcastic mockery (e.g., 'Oooohhh...scary!') or faint, superficial praise that barely keeps the movie from receiving the lowest possible rating (e.g., 'saved from a "1" by the presence of...').
+
+Input Review: {review}
+Output (0 or 1):

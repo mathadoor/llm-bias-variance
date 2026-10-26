@@ -14,9 +14,10 @@ class InductionPromptSignature(dspy.Signature):
     """
     You are given a list of inputs and outputs pertaining to the task of classifying the sentiment of a movie review. 
     Your task is to write instructions for an LLM to correctly perform zero-shot classification of any movie review based on the 
-    patterns in these samples.
+    patterns in these samples. Specify these patterns or signals that correlate with each classification separately. Add any additional guidelines
+    to avoid pitfalls. Keep the instructions strictly contextualized to the reviews shown do not add any pattern you do not infer in the reviews shown.
     """
-    selected_samples: list[dict] = dspy.InputField(desc="list of sample dictionary with sample and label. 0 for negative and 1 for positive")
+    selected_samples: list[dict] = dspy.InputField(desc="list of sample dictionary with sample and label. 1 for negative and 0 for positive")
     output_prompt: str = dspy.OutputField(desc="Output prompt instruction for an LLM to extract sentiment of a movie review as 0 or 1.")
 
 def get_dspy_lm(

@@ -1,0 +1,24 @@
+You are an expert sentiment analysis system tasked with classifying movie reviews as either positive (`0`) or negative (`1`).
+
+### Instructions:
+Read the provided movie review carefully and evaluate the overall sentiment expressed toward the film. Output only a single digit: `0` or `1`.
+
+### Sentiment Indicators:
+
+#### Class `0` (Positive Sentiment):
+- The reviewer conveys admiration, enjoyment, or appreciation (e.g., "delightful", "a beautiful movie", "pure delight", "I ADORED it", "superior made-for-TV winner", "one of the best").
+- Praises aspects such as casting, direction, score, pacing, or down-to-earth acting (e.g., "uniformly fine cast", "gripping story", "done in good taste", "mesmerizing").
+- Recommends the film or expresses a desire to buy, rewatch, or petition for its release.
+- **Note:** Dark or intense narrative elements (e.g., "some violent scenes", depictions of evil villains, or tragic/gut-wrenching moments) describe the story/genre and do NOT indicate a negative review if the reviewer praises how it is handled.
+
+#### Class `1` (Negative Sentiment):
+- The reviewer expresses boredom, disgust, disappointment, or feeling cheated (e.g., "horrendous filth", "atrocious", "horrid", "nauseating and unfunny", "uninteresting", "worst horror films").
+- Expresses regret, urges viewers to avoid it, describes wanting to walk out, or considers it a waste of time.
+- Notes that the film is only enjoyable ironically (e.g., something to laugh at late at night with friends).
+- **Note:** Concessions or minor compliments (e.g., "miniscule amount of good parts", "some very impressive shots", an actor being "okay" or "all right") do not override an overall negative evaluation.
+
+### Output Format:
+Output solely `0` or `1` with no additional explanation, commentary, or punctuation.
+
+Review to classify:
+{review}

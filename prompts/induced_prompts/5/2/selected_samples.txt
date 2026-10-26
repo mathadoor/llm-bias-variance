@@ -1,0 +1,75 @@
+--- sample 1 ---
+review: It is difficult to imagine how the engaging Dan Brown novel 'Angels and Demons' could
+misfire as badly as this film version. Here are ten reasons why the film was a failure. Due to the
+spoilers, please do no read on unless you have already seen the film.<br /><br />(1) In the film,
+there was no love relationship between Robert Langdon and Vittoria Vetra. Worse still, there was not
+even any chemistry between the two leading actors. <br /><br />(2) The breathtaking locations in
+Rome, as described in the novel, were not realized visually in the film. I am aware that director
+Ron Howard encountered difficulties in filming on location. But there are superior photographed
+depictions of Rome on The History Channel than in this film where the Eternal City was presented in
+eternal stock film footage. The great art works described in the novel were only briefly depicted in
+the film. The magnificent Bernini sculpture of the 'Ecstasy of St. Teresa' was only momentarily
+glimpsed, and the West Ponente relief in Vatican Square was not visible at all.<br /><br />(3) The
+most tasteless choice made by the film-maker was in the depiction of the deceased pope who actually
+resembled the beloved John Paul II. In the novel, the pope is clearly fictional with no resemblance
+to any real pope.<br /><br />(4) One of the most colorful (and important) characters of the novel,
+Maximilian Kohler, Director of CERN, was cut out of the screenplay.<br /><br />(5) There were
+numerous instances when the lines of dialog were inaudible due to extraneous background noise.<br
+/><br />(6) There were moments when the faces of characters were not visible due to the shadows and
+chiaroscuro film lighting. This technique worked in 'The Godfather' films, but Ron Howard is no
+Gordon Willis.<br /><br />(7) The College of Cardinals was quite a motley crew with one of the
+electors speaking in a Southern drawl. This dude would have been more at home on a Texas ranch than
+in the Sistine Chapel.<br /><br />(8) The crucial relationship of the Camerlengo and the deceased
+Pope was not defined in the film. This relationship was central to the theme of science vs. religion
+and the relevance of the Illuminati to the plot against the church.<br /><br />(9) In the novel, the
+character of Hassassin was an unforgettable villain. In the film, that assassin character's role was
+a cardboard cutout villain. <br /><br />(10) As a whole, the filmmakers did not trust the workings
+of the successful novel.<br /><br />In the novel, Langdon makes an impossible fall out of the sky
+and into the Tiber River. In Ron Howard's film, it was the movie itself that landed in the Tiber.
+label: 1
+
+--- sample 2 ---
+review: How can Barry Levinson possibly assemble white-hot comedy talents Ben Stiller and Jack
+Black, the gorgeous Rachel Weisz, old pro Christopher Walken and still deliver such a humourless
+stinker?<br /><br />Stiller and Black are friends until the latter invents a spray to make dog mess
+vanish and becomes a conspicuous consuming multi-millionaire.<br /><br />The premises is thin but
+sound enough in the right hands to have been a springboard for some great bitching between the two
+stars but all concerned overplay every hand, every chance they can.<br /><br />Stiller and Black are
+simply not funny for way too much of the time, Weisz looks sensational as always but is criminally
+underused and, with the exception of Walken as a batty barfly who urges Stiller's character to take
+revenge, it's a turgid trudge to the end of this strained farce.
+label: 1
+
+--- sample 3 ---
+review: This is a very funny movie. There is a self deprecating, iconoclastic tone to the movie that
+is very appealing. The characters are interesting. The movie flows very well and holds your interest
+throughout the 1 hour, 50 minutes duration of the film. The film quality is not of the highest
+Hollywood standards; however the original film was supposed to be made in the genre of a gritty
+punk-rock style. The documentary about the attempt to make the film and the subsequent betrayal of
+the film makers is very well detailed and easy to follow. The original film makers themselves become
+the main characters in the documentary version of the movie. The interviews of the film makers and
+the actors has been assembled in a highly entertaining story that illustrates the struggles involved
+in making the original film, the eventual failure of the original project and the phoenix-like
+rising from the ashes that evolved into this documentary film. In my mind the documentary (A Texas
+Tale of Treason) is a much more interesting and entertaining film than the original film (Waldos
+Hawiian Vacation) would have ever been. Two thumbs up for a job well done.
+label: 0
+
+--- sample 4 ---
+review: <br /><br />According to reviewers, the year is 1955 and the players are 20 year-old college
+kids about to enter grad school. Jolly joke!<br /><br />1955? The synthesizer keyboard was not
+invented yet, but there it is on the bandstand. The Ford Pony Car was not invented yet, but there it
+is playing oldies music. The synthesizer appeared to be a model from the mid 1970's. The Pony Car at
+best is from the mid 1960's.<br /><br />20 year-old college kids? Josh Brolin had seen 32 birthdays
+when this made-for-TV movie was produced.<br /><br />The plot is so predictable that viewers have
+plenty of spare time to think of all the errors appearing upon their TV's.
+label: 1
+
+--- sample 5 ---
+review: It's the story of three brothers pulling together in the midst of hardship and loss, and
+learning that the really important things in life are family, love, trust, and forgiveness. The
+entire cast manages to pull in a powerful performance despite a few lousy one-liners. A great film
+for fans of true to life problems befalling believable families. Also worth a look for fans of
+Dermot Mulroney or Sean Astin. They both do an astounding job, often bringing you to tears. Take my
+word for it and rent this today!
+label: 0

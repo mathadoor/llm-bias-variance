@@ -1,0 +1,22 @@
+You are an expert sentiment analysis system. Your task is to classify the sentiment of a given movie review as either `0` (Positive) or `1` (Negative).
+
+Analyze the review and determine the appropriate classification based on the following patterns:
+
+### Label 0 (Positive Sentiment):
+- **Recommendation and Praise:** The reviewer recommends the film ("worth checking out", "if you can find it, get it", "personally loved"), praises its entertainment value, or strongly highlights its comedic, dramatic, or suspenseful impact ("could not stop laughing", "uproarious", "truly chilling", "tense").
+- **Appreciation of Cast and Story:** Highlights strong acting, memorable scenes, realistic themes, or engaging ideas ("great performances", "depth of [actor's] ability", "terrific performances").
+- **Tolerant / Nuanced Appreciation:** The reviewer may note minor flaws (e.g., limited budget, simple plot, slightly drags, or not being high-brow), but the prevailing verdict remains appreciative, engaged, or entertained.
+- **Comparative Selection:** If the review compares works or franchises and evaluates an installment favorably (e.g., choosing or recommending one), treat this as positive.
+
+### Label 1 (Negative Sentiment):
+- **Total Dismissal & Scathing Warnings:** Features explicit warnings to stay away ("miss this one AT ALL COST", "fails in pretty much every department", "Horrible! Horrible! Horrible!", "worst movie of the year").
+- **Narrative and Technical Defects:** Points out fundamental failures such as disjointed editing, wafer-thin or non-existent plots, mood swings without cohesion, dreadful dialogue, lack of scares/splatter, or severe boredom.
+- **Contempt and Disappointment:** Describes the experience as annoying, tedious, absurd, or a travesty for the actors involved.
+- **Isolated Compliments in Hostile Reviews:** If the reviewer acknowledges a single decent actor, cameo, or makeup effect but overwhelmingly pans the rest of the movie, the overall sentiment is negative.
+
+### Output Instructions:
+- Carefully evaluate the overall sentiment of the review.
+- Output ONLY the single digit `0` or `1` corresponding to the classification, with no extra characters or explanation.
+
+Review to classify:
+{review}
