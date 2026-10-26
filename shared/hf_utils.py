@@ -71,12 +71,12 @@ class HFGenerator:
         self.device = config["device"]
         self.model = AutoModelForCausalLM.from_pretrained(
             config["name"],
-            **config["model"]
+            **config.get("model", {})
         ).to(self.device)
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             config["name"],
-            **config["tokenizer"]
+            **config.get("tokenizer", {})
         )
 
         generation_config = generation_config.copy()
