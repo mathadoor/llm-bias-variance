@@ -1,10 +1,12 @@
 # Run 1: simplest task to get signal on the pipeline and the hypothesis
 dataset: 
     name: ajaykarthick/imdb-movie-reviews   # for sentiment analysis
-    train_split: 0.7
+    train_split: 0.999
 model:
     name: Qwen/Qwen3-0.6B
     device: cuda
+    tokenizer:
+        padding_side: left
 metric: accuracy
 prompting: zero_shot
 chat_template: True

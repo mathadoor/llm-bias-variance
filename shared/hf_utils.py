@@ -155,7 +155,11 @@ class HFGenerator:
         decode = lambda ids: self.tokenizer.decode(ids, skip_special_tokens=True)
         rows = []
         for tokens, probs in zip(output_dict["output_tokens"], output_dict["logits"]):
-            end = decode(tokens).index(label_header) + len(label_header)
+            try:
+                end = decode(tokens).index(label_header) + len(label_header)
+            except:
+                print(decode(tokens))
+                raise ValueError("failed")
             for i in range(len(tokens)):
                 if len(decode(tokens[:i])) >= end and decode(tokens[:i + 1])[end:].strip():
                     rows.append(probs[i])
