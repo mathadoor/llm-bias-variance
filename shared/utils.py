@@ -1,5 +1,6 @@
 import yaml
 from pathlib import Path
+import torch
 from torch import Tensor
 
 def coerce_numeric(text: str, strict=False, placeholder=-1) -> float | int:
@@ -56,7 +57,7 @@ def compute_brier_decomposition(
             )
 
     # validate tensor dimension 
-    P, O = tensor_dict["p"], tensor_dict["o"]
+    P, O = tensor_dict["p"].float(), tensor_dict["o"].float()
     dim_p, dim_o = len(P.size()), len(O.size())
 
     if  dim_p != 2 or dim_o != 1:
@@ -65,6 +66,9 @@ def compute_brier_decomposition(
             f"provided: dim(P)={dim_p}, dim(O)={dim_o}"
         )
  
+    if P.numel() == 0 or O.numel() == 0:
+        raise ValueError(f"P and O must not be empty. P size: {P.size()}, O size: {O.size()}")
+
     # valiate number of samples is the same
     if P.size(0) != O.size(0):
         raise ValueError(
@@ -73,7 +77,10 @@ def compute_brier_decomposition(
             f"O size: {O.size()}\n"
         )
 
-    # enforce value range
+    # enforce value range (nan/inf fail the range comparisons silently, so check them first)
+    if not (torch.isfinite(P).all() and torch.isfinite(O).all()):
+        raise ValueError("P and O must not contain nan or inf")
+
     if ((0 > P) | (P > 1)).any() or ((O != 0.0) & (O != 1.0)).any():
         raise ValueError(
             "Values of P must be in the range of 0 and 1. "
@@ -81,7 +88,9 @@ def compute_brier_decomposition(
         )
     
     # do the actual computation
+    # P is (samples, runs): the mean over dim 1 is across runs, for each sample
     p_mean = P.mean(axis=1)
     variance = ((P - p_mean.unsqueeze(-1))**2).mean()
     bias_sq = ((O - p_mean)**2).mean()
+    # returns (variance, bias squared); variance + bias_sq == mean Brier score
     return variance.item(), bias_sq.item()

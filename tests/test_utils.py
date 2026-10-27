@@ -5,7 +5,7 @@ from pathlib import Path
 import os
 import shutil
 import tempfile
-from torch import Tensor, rand, floor
+from torch import Tensor, rand, floor, tensor, zeros, int64
 from shared import utils
 
 p_list =  [[0.2, 0.5, 0.8], [0.9, 0.7, 0.8]]
@@ -86,6 +86,44 @@ class TestComputeBrierScore:
         with pytest.raises(ValueError) as info:
             utils.compute_brier_decomposition(P, O)
         assert "First dimension of P and O must match" in str(info.value)
+
+    def test_integer_tensors_are_accepted(self):
+        P = tensor([[1, 0], [0, 0]], dtype=int64)
+        O = tensor([1, 0], dtype=int64)
+
+        var, bias = utils.compute_brier_decomposition(P, O)
+
+        assert math.isclose(var, 0.125, rel_tol=1e-5)
+        assert math.isclose(bias, 0.125, rel_tol=1e-5)
+
+    @pytest.mark.parametrize(
+            "P, O",
+            [
+                ([[0.2, math.nan]], [1.0]),
+                ([[0.2, math.inf]], [1.0]),
+                ([[0.2, 0.5]], [math.nan]),
+                ([[0.2, 0.5]], [math.inf]),
+            ]
+        )
+    def test_non_finite_values_raise_error(self, P, O):
+        with pytest.raises(ValueError) as info:
+            utils.compute_brier_decomposition(P, O)
+
+        assert "nan or inf" in str(info.value)
+
+    @pytest.mark.parametrize(
+            "P, O",
+            [
+                (zeros(0, 3), zeros(0)),
+                (zeros(2, 0), Tensor([1.0, 0.0])),
+                ([[]], [1.0]),
+            ]
+        )
+    def test_empty_inputs_raise_error(self, P, O):
+        with pytest.raises(ValueError) as info:
+            utils.compute_brier_decomposition(P, O)
+
+        assert "must not be empty" in str(info.value)
 
 def test_load_config(tmp_path):
 
