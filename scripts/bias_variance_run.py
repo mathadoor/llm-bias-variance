@@ -1,5 +1,87 @@
 import argparse
+import mlflow
+import numpy as np
+import pandas as pd
+import torch
+from datasets import Dataset
+from tqdm import tqdm
 from shared import utils, hf_utils
+
+def run_prompt(
+    induced_prompt: str,
+    num_k: int,
+    hf_generator: hf_utils.HFGenerator,
+    hf_dataset: Dataset,
+    config: dict
+):
+    with mlflow.start_run():
+        
+        # tokenize and generate
+        mlflow.log_params(dict(num_samples=num_k, **config["model"], **config.get("generation", {})))
+    
+        # log prompts
+        mlflow.log_text(induced_prompt, "induced_prompt.txt")
+        
+        # Validation
+        val_batch_dataset = hf_dataset.batch(
+            batch_size=config.get("validation", {}).get("batch_size", 32),
+            drop_last_batch=False,
+        )
+        with torch.no_grad():
+            completed_prompt = []
+            ground_truth = []
+            predictions = []
+            probs = []
+            for batch in tqdm(val_batch_dataset):
+                # Prepare inputs
+                reviews = [
+                    utils.prep_messages(f"{induced_prompt}\n Place your output under the headline ### Output", sample)
+                    for sample in batch['review']
+                ]
+                output_dict = hf_generator.generate_chat(reviews)
+                full_text = output_dict["output_text"]
+
+                curr_probs = hf_generator.get_label_logits("### Output", output_dict)
+
+                # Extract outputs
+                outputs = [
+                    utils.coerce_numeric(
+                        x.split("### Output")[-1].strip()
+                    )
+                    for x in full_text
+                ]
+
+                # merge
+                ground_truth.extend(batch['label'])
+                probs.extend(curr_probs)
+                completed_prompt.extend(full_text)
+                predictions.extend(outputs)
+
+        accuracy = (np.array(ground_truth) == np.array(predictions)).mean()
+
+        # renormalize over the label tokens, then use the probability of the positive label (last one)
+        label_probs = torch.stack(probs)
+        renormalized_probs = label_probs / label_probs.sum(dim=-1, keepdim=True)
+        mlflow.log_metric("accuracy", float(accuracy))
+        for suffix, label_prob in (("", label_probs), ("_renorm", renormalized_probs)):
+            var, bias = utils.compute_brier_decomposition(label_prob[:, -1:], ground_truth)
+            mlflow.log_metric(f"brier_score{suffix}", var + bias)
+            mlflow.log_metric(f"brier_score_var{suffix}", var)
+            mlflow.log_metric(f"brier_score_bias{suffix}", bias)
+    
+        # Sample traces, stratified on correctness
+        results = pd.DataFrame(dict(completed_prompt=completed_prompt, ground_truth=ground_truth, prediction=predictions))
+        results["label_probs"] = label_probs.tolist()
+        results["renormalized_label_probs"] = renormalized_probs.tolist()
+        results["correct"] = results["ground_truth"] == results["prediction"]
+        n_traces = config.get("validation", {}).get("num_traces", 5)
+        traces = results.groupby("correct", group_keys=False).apply(
+            lambda g: g.sample(min(n_traces, len(g)), random_state=config.get("seed", 0))
+        )
+        mlflow.log_table(traces, "validation_traces.json")
+
+        # full validation output, so renormalization etc. can be tested later
+        mlflow.log_table(results, "validation_results.json")
 
 if __name__ == "__main__":
 
@@ -28,3 +110,13 @@ if __name__ == "__main__":
 
     # HF generator
     hf_generator = hf_utils.HFGenerator(task_config["model"], task_config["generation"])
+
+    # run every induced prompt on the validation split
+    mlflow_config = task_config.get("mlflow", {})
+    if mlflow_config.get("tracking_uri"):
+        mlflow.set_tracking_uri(mlflow_config["tracking_uri"])
+    mlflow.set_experiment(mlflow_config.get("experiment", "llm-bias-variance"))
+
+    for num_k, induced_prompts in prompts.items():
+        for induced_prompt in induced_prompts:
+            run_prompt(induced_prompt, num_k, hf_generator, hf_datasets["val"], task_config)
