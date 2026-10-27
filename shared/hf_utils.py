@@ -1,3 +1,4 @@
+from bisect import bisect_left
 from typing import Literal, Sequence
 import torch
 from torch import Tensor, softmax
@@ -167,3 +168,36 @@ class HFGenerator:
             else:
                 raise ValueError(f"No token found after header {label_header!r}")
         return torch.stack(rows)
+
+    def get_answer_probs(
+        self,
+        headers: Sequence[str],
+        output_dict: dict
+    ) -> list[tuple[str, int, Tensor] | None]:
+        # per sample: (header used, position of the emitted label in `labels`, label probs at that step),
+        # or None when no header is followed by a label token. Headers are tried in order, last occurrence first,
+        # since the final answer comes after any mention of the header in the reasoning.
+        decode = lambda ids: self.tokenizer.decode(ids, skip_special_tokens=True)
+        answers = []
+        for tokens, probs in zip(output_dict["output_tokens"], output_dict["logits"]):
+            text = decode(tokens)
+            answer = None
+            for header in headers:
+                start = text.rfind(header)
+                if start == -1:
+                    continue
+                end = start + len(header)
+
+                # first step whose prefix covers the header (decoded length only grows with the prefix)
+                low = bisect_left(range(len(tokens)), end, key=lambda i: len(decode(tokens[:i])))
+
+                # the next non-whitespace token must be one of the labels
+                for i in range(low, len(tokens)):
+                    if decode(tokens[:i + 1])[end:].strip():
+                        if tokens[i].item() in self.label_index:
+                            answer = (header, self.label_index.index(tokens[i].item()), probs[i])
+                        break
+                if answer is not None:
+                    break
+            answers.append(answer)
+        return answers

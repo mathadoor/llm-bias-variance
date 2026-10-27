@@ -257,6 +257,35 @@ def test_get_label_logits_returns_correct_probs():
 
 
 
+@pytest.mark.parametrize(
+    "pieces, label_index, expected",
+    [
+        # (header used, position in labels, step of the answer token) or None
+        (["positive sentiment.", " 0 is", " the label", ". ###", " output", " 1", " hello"], [8, 9], ("### output", 1, 5)),
+        (["reasoning ", "</think>", "\n\n", "1", " done"], [6, 7], ("</think>", 1, 3)),   # skips whitespace
+        (["### output", " [label]", " </think>", " 0"], [7], ("</think>", 0, 3)),          # primary not followed by a label
+        (["no header here ", "0"], [5], None),
+        (["</think>", " ok", " 0"], [6], None),                                           # next token is not a label
+        (["answer </think>"], [4], None),                                                 # nothing after the header
+    ],
+)
+def test_get_answer_probs(pieces, label_index, expected):
+    gen, _, tokenizer = _make_generator(_output(sequences=torch.zeros(1, 3)))
+    tokenizer.decode.side_effect = lambda ids, **kw: "".join(pieces[: len(ids)])
+    gen.label_index = label_index
+    logits = torch.softmax(torch.rand(1, len(pieces), 2), dim=-1)
+    output_dict = {"output_tokens": torch.arange(4, 4 + len(pieces)).unsqueeze(0), "logits": logits}
+
+    answer = gen.get_answer_probs(["### output", "</think>"], output_dict)[0]
+
+    if expected is None:
+        assert answer is None
+    else:
+        header, label, step = expected
+        assert answer[:2] == (header, label)
+        assert torch.equal(answer[2], logits[0, step])
+
+
 class TestLogitProcessorCall:
 
     @pytest.mark.parametrize(

@@ -8,10 +8,7 @@ from tqdm import tqdm
 from shared import utils, hf_utils
 
 ANSWER_HEADER = "### output"
-
-def has_answer(text: str) -> bool:
-    # the header must be present with something after it, otherwise there is no answer token to read
-    return ANSWER_HEADER in text and text.split(ANSWER_HEADER)[-1].strip() != ""
+ANSWER_HEADERS = [ANSWER_HEADER, "</think>"]
 
 def run_prompt(
     induced_prompt: str,
@@ -33,6 +30,7 @@ def run_prompt(
             batch_size=config.get("validation", {}).get("batch_size", 32),
             drop_last_batch=False,
         )
+        labels = config["generation"]["labels"]
         with torch.no_grad():
             completed_prompt = []
             ground_truth = []
@@ -48,28 +46,21 @@ def run_prompt(
                 output_dict = hf_generator.generate_chat(reviews)
                 full_text = output_dict["output_text"]
 
-                # only samples where the header was produced have a prediction and label probabilities
-                batch_answered = [has_answer(x) for x in full_text]
-                valid = [i for i, ok in enumerate(batch_answered) if ok]
-                curr_probs = iter(
-                    hf_generator.get_label_logits(
-                        ANSWER_HEADER,
-                        {key: output_dict[key][valid] for key in ("output_tokens", "logits")}
-                    )
-                    if valid else []
-                )
+                # only samples with a label token right after a header have a prediction and label probabilities
+                answers = hf_generator.get_answer_probs(ANSWER_HEADERS, output_dict)
 
                 # merge
                 ground_truth.extend(batch['label'])
                 completed_prompt.extend(full_text)
-                answered.extend(batch_answered)
+                answered.extend(answer is not None for answer in answers)
                 predictions.extend(
-                    utils.coerce_numeric(x.split(ANSWER_HEADER)[-1].strip()) if ok else None
-                    for x, ok in zip(full_text, batch_answered)
+                    None if answer is None else utils.coerce_numeric(labels[answer[1]])
+                    for answer in answers
                 )
-                probs.extend(next(curr_probs) if ok else None for ok in batch_answered)
+                probs.extend(None if answer is None else answer[2] for answer in answers)
 
         answered = np.array(answered)
+        mlflow.log_metric("num_val_samples", len(answered))
         mlflow.log_metric("failure_rate", float(1 - answered.mean()))
 
         if answered.any():
